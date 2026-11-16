@@ -293,6 +293,68 @@ details.struct[open] summary::after { content: "접기"; }
 .sheet .ok { border: 0; background: var(--green); color: var(--green-ink); }
 .sheet .no { border: 1px solid var(--line); background: var(--well); }
 
+/* tabs + views */
+.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--rail); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+.tabs a {
+  text-align: center; padding: 9px 6px; border-radius: 9px; font-weight: 700; font-size: 14px;
+  color: var(--muted); text-decoration: none;
+}
+.tabs a.on { background: var(--green); color: var(--green-ink); }
+.view { display: grid; gap: 14px; }
+
+/* cloud save */
+.cloud { display: grid; gap: 6px; }
+.btn-save {
+  border: 0; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 900;
+  background: var(--chalk); color: var(--felt);
+}
+.btn-save.done { background: var(--well); color: var(--green); border: 1px solid #2f5c47; }
+.cloud .saved { text-align: center; }
+
+/* ranking */
+.month { display: grid; grid-template-columns: 52px 1fr 52px; gap: 8px; align-items: center; }
+.month h2 { margin: 0; text-align: center; font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.month .btn-side { padding: 10px 0; }
+.rank { background: var(--rail); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.rank-head, .rk {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) 72px 64px; gap: 6px; align-items: center; padding: 0 12px;
+}
+.rank-head { background: var(--green); color: var(--green-ink); font-size: 12px; font-weight: 700; padding-block: 8px; }
+.rank-head span:nth-child(n+3), .rk > :nth-child(n+3) { text-align: right; }
+.rk { padding-block: 11px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.rk:first-child { border-top: 0; }
+.rk .no { font-size: 18px; font-weight: 900; text-align: center; }
+.rk .nm { font-size: 16px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.rk .gm { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.rk .pt { font-size: 20px; font-weight: 900; }
+.rk.top1 { background: var(--gold-bg); }
+.rk.top1 .no, .rk.top1 .pt { color: var(--gold); }
+.rk.top2 .no, .rk.top3 .no { color: var(--green); }
+.empty-note { padding: 22px 14px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.6; }
+h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted); }
+.games { display: grid; gap: 10px; }
+.game { background: var(--rail); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+.game-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.game-top b { font-size: 15px; }
+.game-top span { font-size: 12px; color: var(--muted); }
+.game ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.game li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 6px; }
+.game li .r { color: var(--muted); }
+.game li .t { font-weight: 700; }
+.game .del { justify-self: end; background: none; border: 0; color: var(--red); font-size: 13px; text-decoration: underline; padding: 2px 0; }
+
+/* pin dialog */
+.pin-in {
+  width: 100%; background: var(--well); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; font-size: 18px; text-align: center; letter-spacing: 0.2em; color: var(--chalk); outline: 0;
+}
+.pin-in:focus { border-color: var(--green); }
+.remember { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.sheet .err { color: var(--red); font-size: 13px; min-height: 1em; }
+.sheet .err:empty { display: none; }
+.sheet .ok:disabled { opacity: 0.5; }
+.res-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 14px; background: var(--well); border-radius: 10px; padding: 10px 12px; font-variant-numeric: tabular-nums; }
+
 @media (prefers-reduced-motion: reduce) {
   .toast, .mini { transition: none; }
   .timer.flash { animation: none; }
@@ -317,6 +379,12 @@ details.struct[open] summary::after { content: "접기"; }
     </div>
   </header>
 
+  <nav class="tabs" aria-label="화면 선택">
+    <a href="#" id="tabSheet" class="on">오늘 기록표</a>
+    <a href="#ranking" id="tabRank">이번 달 랭킹</a>
+  </nav>
+
+  <div class="view" id="viewSheet">
   <section class="timer" id="timer" aria-label="블라인드 타이머">
     <div class="t-top">
       <span class="lv-chip" id="t-lv">레벨 1</span>
@@ -357,6 +425,11 @@ details.struct[open] summary::after { content: "접기"; }
 
   <div class="rule">
     <b>당일총점</b> = 참가 기본 1점 + 등수 보너스(1등 +4, 2등 +2, 3·4등 +1) + 딜러(4번 자리) +0.5 + 뽑기점수
+  </div>
+
+  <div class="cloud">
+    <button class="btn-save" id="saveBtn" type="button">결과 저장 · 랭킹에 올리기</button>
+    <span class="saved" id="cloudStatus">게임이 끝나면 눌러 주세요. 딜러 비밀번호가 필요해요.</span>
   </div>
 
   <div class="foot">
@@ -400,6 +473,43 @@ details.struct[open] summary::after { content: "접기"; }
       </div>
     </div>
   </details>
+  </div>
+
+  <div class="view" id="viewRank" hidden>
+    <div class="month">
+      <button class="btn-side" id="mPrev" type="button" aria-label="이전 달">◀</button>
+      <h2 id="mLabel">2026년 11월</h2>
+      <button class="btn-side" id="mNext" type="button" aria-label="다음 달">▶</button>
+    </div>
+    <section class="rank" aria-label="월간 랭킹">
+      <div class="rank-head"><span>순위</span><span>이름</span><span>게임</span><span>총점</span></div>
+      <div id="rankList"></div>
+    </section>
+    <div class="foot">
+      <span class="saved" id="rankStatus"></span>
+      <div class="btns">
+        <button class="btn-line" id="rankReload" type="button">새로고침</button>
+        <button class="btn-line" id="rankCopy" type="button">랭킹 복사</button>
+      </div>
+    </div>
+    <h3 class="sub">이번 달 게임 기록</h3>
+    <div id="gameList" class="games"></div>
+    <button class="btn-text" id="pinChange" type="button">딜러 비밀번호 바꾸기</button>
+  </div>
+</div>
+<div class="modal" id="pinModal" hidden>
+  <form class="sheet" id="pinForm" role="dialog" aria-modal="true" aria-labelledby="pTitle">
+    <h2 id="pTitle">딜러 비밀번호</h2>
+    <p id="pDesc"></p>
+    <input class="pin-in" id="pinOld" type="password" inputmode="numeric" autocomplete="off" placeholder="비밀번호" aria-label="비밀번호">
+    <input class="pin-in" id="pinNew" type="password" inputmode="numeric" autocomplete="off" placeholder="새 비밀번호 (4자리 이상)" aria-label="새 비밀번호" hidden>
+    <label class="remember"><input type="checkbox" id="pinRemember" checked> 이 폰에서 기억하기</label>
+    <p class="err" id="pErr"></p>
+    <div class="acts">
+      <button class="no" id="pNo" type="button">취소</button>
+      <button class="ok" id="pOk" type="submit">확인</button>
+    </div>
+  </form>
 </div>
 <div class="modal" id="modal" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
@@ -435,7 +545,8 @@ details.struct[open] summary::after { content: "접기"; }
   };
   const blankTimer = () => ({ idx: 0, running: false, endsAt: null, remain: null, levelLen: null, dur: START_MIN, applied: {} });
   const blankState = () => ({
-    date: todayStr(), table: "", start: null, end: null, timer: blankTimer(),
+    date: todayStr(), day: null, table: "", start: null, end: null, timer: blankTimer(),
+    savedId: null, savedAt: null, savedSig: null,
     seats: Array.from({ length: SEATS }, () => ({ name: "", rank: "", mission: "", draw: "" }))
   });
   const L = (sb, bb, extra) => Object.assign({ sb, bb }, extra || {});
@@ -873,7 +984,7 @@ details.struct[open] summary::after { content: "접기"; }
       row.className = "seat cols" + (no === DEALER_SEAT ? " dealer" : "");
       row.innerHTML = `
         <div class="num">${no}${no === DEALER_SEAT ? "<small>딜러</small>" : ""}</div>
-        <input class="in-name" id="n${i}" placeholder="이름" autocomplete="off" aria-label="${no}번 이름">
+        <input class="in-name" id="n${i}" placeholder="이름" list="players" autocomplete="off" aria-label="${no}번 이름">
         <input class="in-rank" id="r${i}" placeholder="등수" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="${no}번 등수">
         <input class="in-mission" id="m${i}" placeholder="미션번호" autocomplete="off" aria-label="${no}번 미션번호">
         <input class="in-draw" id="d${i}" placeholder="뽑기점수" autocomplete="off" aria-label="${no}번 뽑기점수">
@@ -922,11 +1033,12 @@ details.struct[open] summary::after { content: "접기"; }
       if (badDraw) msgs.push("뽑기점수에 숫자가 없어요");
       el.warn.textContent = msgs.join(" · ");
     });
+    renderCloud();
   }
 
   /* ---------- header ---------- */
   function renderHeader() { $("date").textContent = state.date; $("table").value = state.table; }
-  $("table").addEventListener("input", (e) => { state.table = e.target.value; saveSoon(); });
+  $("table").addEventListener("input", (e) => { state.table = e.target.value; saveSoon(); renderCloud(); });
 
   /* ---------- copy ---------- */
   /* [날짜 나나덤 점수기록] 다음 줄부터 등수 순서로: 1등 이름 총 7점 / 미션 1,3 */
@@ -973,6 +1085,7 @@ details.struct[open] summary::after { content: "접기"; }
     state = blankState();
     keepAwake(false);
     $("fallback").hidden = true;
+    state.day = isoDay(Date.now());
     renderHeader(); buildSeats(); refresh(); renderTimer(); renderStruct();
     save(); toast("초기화했어요");
   });
@@ -989,8 +1102,267 @@ details.struct[open] summary::after { content: "접기"; }
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
   }
 
+  /* ======================= 결과 저장 · 월간 랭킹 (Supabase) ======================= */
+  const SB_URL = "https://vzbjcrdfgcdsnoppcbxn.supabase.co";
+  const SB_KEY = "sb_publishable_sKo2NDmPksWx9ymTOB9V9A_eeLeFlAZ";   // 공개용 키. 쓰기는 비밀번호 확인 함수로만 됨
+  const PIN_KEY = "holdem-pin";
+  const pad = (n) => String(n).padStart(2, "0");
+  const isoDay = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const dayLabel = (iso) => { const d = new Date(iso + "T12:00:00"); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${"일월화수목금토"[d.getDay()]})`; };
+  const normName = (s) => String(s).trim().replace(/\s+/g, " ");
+
+  async function sb(path, body) {
+    const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+      method: body ? "POST" : "GET",
+      headers: { apikey: SB_KEY, "Content-Type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if (!r.ok) throw new Error("http " + r.status);
+    return r.json();
+  }
+  const getPin = () => { try { return localStorage.getItem(PIN_KEY); } catch (e) { return null; } };
+  const setPin = (v) => { try { v ? localStorage.setItem(PIN_KEY, v) : localStorage.removeItem(PIN_KEY); } catch (e) {} };
+  const errText = (e) => ({
+    wrong: "비밀번호가 틀렸어요",
+    locked: "여러 번 틀려서 10분 동안 잠겼어요. 잠시 후 다시 해 주세요",
+    network: "인터넷 연결을 확인해 주세요",
+    no_results: "저장할 결과가 없어요",
+    bad_name: "이름이 빈 자리가 있어요",
+    short_pin: "새 비밀번호는 4자리 이상으로 해 주세요"
+  }[e] || "저장하지 못했어요. 다시 해 주세요");
+
+  /* ---------- 비밀번호 창 ---------- */
+  let pinSubmit = null, pinCancel = null;
+  function openPin(title, desc, change) {
+    $("pTitle").textContent = title; $("pDesc").textContent = desc;
+    $("pinOld").value = ""; $("pinNew").value = ""; $("pErr").textContent = "";
+    $("pinOld").placeholder = change ? "지금 비밀번호" : "비밀번호";
+    $("pinNew").hidden = !change;
+    $("pOk").disabled = false;
+    $("pinModal").hidden = false;
+    setTimeout(() => $("pinOld").focus(), 50);
+  }
+  function closePin() { $("pinModal").hidden = true; pinSubmit = pinCancel = null; }
+  $("pinForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const pin = $("pinOld").value.trim(), np = $("pinNew").value.trim();
+    if (!pin) { $("pErr").textContent = "비밀번호를 넣어 주세요"; return; }
+    if (!$("pinNew").hidden && np.length < 4) { $("pErr").textContent = errText("short_pin"); return; }
+    $("pOk").disabled = true; $("pErr").textContent = "";
+    pinSubmit && pinSubmit(pin, np);
+  });
+  $("pNo").addEventListener("click", () => { const c = pinCancel; closePin(); c && c(); });
+
+  /* 저장된 비밀번호로 먼저 해 보고, 없거나 틀리면 창을 띄움 */
+  function withPin(title, desc, fn) {
+    return new Promise((resolve) => {
+      const run = async (pin, fromModal) => {
+        let res;
+        try { res = await fn(pin); } catch (e) { res = { ok: false, error: "network" }; }
+        if (res.ok) {
+          if (fromModal) { setPin($("pinRemember").checked ? pin : null); closePin(); }
+          resolve(res); return;
+        }
+        if (!fromModal) {
+          if (res.error === "wrong") { setPin(null); ask(); } else { toast(errText(res.error)); resolve(null); }
+          return;
+        }
+        $("pErr").textContent = errText(res.error); $("pOk").disabled = false;
+      };
+      const ask = () => {
+        openPin(title, desc, false);
+        pinSubmit = (pin) => run(pin, true);
+        pinCancel = () => resolve(null);
+      };
+      const stored = getPin();
+      stored ? run(stored, false) : ask();
+    });
+  }
+
+  $("pinChange").addEventListener("click", () => {
+    openPin("딜러 비밀번호 바꾸기", "바꾸면 다른 딜러 폰에 기억된 비밀번호도 다시 넣어야 해요.", true);
+    pinSubmit = async (pin, np) => {
+      let res;
+      try { res = await sb("rpc/holdem_change_pin", { p_old: pin, p_new: np }); } catch (e) { res = { ok: false, error: "network" }; }
+      if (res.ok) { setPin($("pinRemember").checked ? np : null); closePin(); toast("비밀번호를 바꿨어요"); }
+      else { $("pErr").textContent = errText(res.error); $("pOk").disabled = false; }
+    };
+    pinCancel = null;
+  });
+
+  /* ---------- 오늘 결과 저장 ---------- */
+  function payload() {
+    const results = state.seats.map((s, i) => ({ s, i, t: score(s, i + 1) }))
+      .filter((p) => p.t !== null)
+      .map((p) => ({
+        seat: p.i + 1, player: normName(p.s.name), rank: parseInt(p.s.rank, 10) || null,
+        mission: p.s.mission.trim(), draw: drawPoints(p.s.draw), total: Math.round(p.t * 10) / 10
+      }));
+    return {
+      played_on: isoDay(state.start || state.day || Date.now()),
+      table_name: state.table.trim(),
+      started_at: state.start ? new Date(state.start).toISOString() : null,
+      ended_at: state.end ? new Date(state.end).toISOString() : null,
+      results
+    };
+  }
+  const sigOf = (p) => JSON.stringify([p.played_on, p.table_name, p.results]);
+  function renderCloud() {
+    const b = $("saveBtn"), st = $("cloudStatus");
+    if (!state.savedId) {
+      b.textContent = "결과 저장 · 랭킹에 올리기"; b.classList.remove("done");
+      st.textContent = "게임이 끝나면 눌러 주세요. 딜러 비밀번호가 필요해요.";
+    } else if (state.savedSig === sigOf(payload())) {
+      b.textContent = "랭킹에 저장됨 · " + hhmm(state.savedAt); b.classList.add("done");
+      st.textContent = "고칠 게 있으면 기록표를 고친 뒤 다시 저장하면 돼요.";
+    } else {
+      b.textContent = "바뀐 내용 다시 저장"; b.classList.remove("done");
+      st.textContent = "저장한 뒤에 바뀐 내용이 있어요. 다시 저장해야 랭킹에 반영돼요.";
+    }
+  }
+  $("saveBtn").addEventListener("click", () => {
+    const p = payload();
+    if (!p.results.length) { toast("입력된 결과가 없어요"); return; }
+    const noName = p.results.find((r) => !r.player);
+    if (noName) { toast(`${noName.seat}번 자리 이름을 적어 주세요`); $("n" + (noName.seat - 1)).focus(); return; }
+    const ranks = p.results.map((r) => r.rank).filter(Boolean);
+    if (new Set(ranks).size !== ranks.length) { toast("등수가 겹쳐요. 고친 뒤 저장해 주세요"); return; }
+    const sorted = [...p.results].sort((a, b) => (a.rank || 99) - (b.rank || 99) || a.seat - b.seat);
+    const unranked = p.results.filter((r) => !r.rank).length;
+    let body = `<ul class="res-list">${sorted.map((r) =>
+      `<li>${r.rank ? r.rank + "등" : "등수없음"} ${esc(r.player)} · ${fmt(r.total)}점</li>`).join("")}</ul>`;
+    if (unranked) body += `<p>등수가 비어 있는 사람이 ${unranked}명 있어요. 점수는 그대로 랭킹에 더해져요.</p>`;
+    if (state.start && !state.end) body += `<p>아직 게임 종료를 누르지 않았어요.</p>`;
+    if (state.savedId) body += `<p>이미 저장한 게임이에요. 이 내용으로 바꿔서 저장해요.</p>`;
+    openModal({
+      title: `${dayLabel(p.played_on)}${p.table_name ? " · " + esc(p.table_name) : ""} 결과 ${p.results.length}명`,
+      body, ok: state.savedId ? "다시 저장" : "랭킹에 저장", no: "취소",
+      onOk: async () => {
+        const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 결과가 랭킹에 올라가요.",
+          (pin) => sb("rpc/holdem_save_game", { p_pin: pin, p_game: p, p_game_id: state.savedId || null }));
+        if (!res) return;
+        state.savedId = res.id; state.savedAt = Date.now(); state.savedSig = sigOf(p);
+        save(); renderCloud(); rankStale = true; loadNames();
+        toast("저장했어요. 랭킹에 반영됐어요");
+      }
+    });
+  });
+
+  /* ---------- 이름 자동완성 ---------- */
+  const dl = document.createElement("datalist"); dl.id = "players"; document.body.appendChild(dl);
+  async function loadNames() {
+    try {
+      const rows = await sb("holdem_results?select=player&order=id.desc&limit=600");
+      const names = [...new Set(rows.map((r) => normName(r.player)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+      dl.innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join("");
+    } catch (e) {}
+  }
+
+  /* ---------- 월간 랭킹 ---------- */
+  const now0 = new Date();
+  let rankY = now0.getFullYear(), rankM = now0.getMonth() + 1, rankStale = true, rankRows = [], rankGames = [];
+  const monthLabel = () => `${rankY}년 ${rankM}월`;
+  function shiftMonth(d) {
+    rankM += d;
+    if (rankM < 1) { rankM = 12; rankY--; } else if (rankM > 12) { rankM = 1; rankY++; }
+    loadRank();
+  }
+  $("mPrev").addEventListener("click", () => shiftMonth(-1));
+  $("mNext").addEventListener("click", () => shiftMonth(1));
+  $("rankReload").addEventListener("click", () => loadRank());
+
+  async function loadRank() {
+    rankStale = false;
+    $("mLabel").textContent = monthLabel();
+    const cur = new Date();
+    $("mNext").disabled = rankY > cur.getFullYear() || (rankY === cur.getFullYear() && rankM >= cur.getMonth() + 1);
+    $("rankStatus").textContent = "불러오는 중…";
+    const from = `${rankY}-${pad(rankM)}-01`;
+    const to = rankM === 12 ? `${rankY + 1}-01-01` : `${rankY}-${pad(rankM + 1)}-01`;
+    const want = monthLabel();
+    let games;
+    try {
+      games = await sb(`holdem_games?select=id,played_on,table_name,created_at,holdem_results(seat,player,rank,mission,total)` +
+        `&played_on=gte.${from}&played_on=lt.${to}&order=played_on.desc,created_at.desc`);
+    } catch (e) {
+      if (want !== monthLabel()) return;
+      $("rankStatus").textContent = "불러오지 못했어요. 인터넷 연결을 확인하고 새로고침을 눌러 주세요.";
+      return;
+    }
+    if (want !== monthLabel()) return;          // 그 사이 다른 달로 넘어감
+    rankGames = games;
+    const map = new Map();
+    games.forEach((g) => g.holdem_results.forEach((r) => {
+      const key = normName(r.player);
+      const p = map.get(key) || { name: key, total: 0, games: 0, wins: 0 };
+      p.total += Number(r.total) || 0; p.games++; if (r.rank === 1) p.wins++;
+      map.set(key, p);
+    }));
+    rankRows = [...map.values()].sort((a, b) => b.total - a.total || b.wins - a.wins || a.name.localeCompare(b.name, "ko"));
+    rankRows.forEach((p, i) => { p.no = i > 0 && Math.abs(p.total - rankRows[i - 1].total) < 1e-9 ? rankRows[i - 1].no : i + 1; });
+    renderRank();
+    $("rankStatus").textContent = `게임 ${games.length}판 · ${rankRows.length}명 · ${hhmm(Date.now())} 기준`;
+  }
+  function renderRank() {
+    $("rankList").innerHTML = rankRows.length ? rankRows.map((p) => `
+      <div class="rk${p.no <= 3 ? " top" + p.no : ""}">
+        <span class="no">${p.no}</span>
+        <span class="nm">${esc(p.name)}</span>
+        <span class="gm">${p.games}게임${p.wins ? `<br>1등 ${p.wins}회` : ""}</span>
+        <span class="pt">${fmt(p.total)}</span>
+      </div>`).join("")
+      : `<div class="empty-note">${monthLabel()} 기록이 아직 없어요.<br>오늘 기록표에서 게임이 끝난 뒤 '결과 저장'을 누르면 여기에 쌓여요.</div>`;
+    $("gameList").innerHTML = rankGames.map((g) => {
+      const rs = [...g.holdem_results].sort((a, b) => (a.rank || 99) - (b.rank || 99) || (a.seat || 0) - (b.seat || 0));
+      return `<div class="game">
+        <div class="game-top"><b>${dayLabel(g.played_on)}${g.table_name ? " · " + esc(g.table_name) : ""}</b><span>${rs.length}명</span></div>
+        <ol>${rs.map((r) => `<li><span class="r">${r.rank ? r.rank + "등" : "–"}</span><span>${esc(r.player)}${r.mission ? ` <span class="r">미션 ${esc(r.mission)}</span>` : ""}</span><span class="t">${fmt(Number(r.total))}점</span></li>`).join("")}</ol>
+        <button class="del" type="button" data-del-game="${g.id}">이 게임 기록 지우기</button>
+      </div>`;
+    }).join("") || `<div class="empty-note">저장된 게임이 없어요.</div>`;
+  }
+  $("gameList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-del-game]"); if (!b) return;
+    const g = rankGames.find((x) => x.id === b.dataset.delGame); if (!g) return;
+    openModal({
+      title: "게임 기록 지우기",
+      body: `<p>${dayLabel(g.played_on)}${g.table_name ? " · " + esc(g.table_name) : ""} 게임(${g.holdem_results.length}명)을 지우면 랭킹 점수에서도 빠져요. 되돌릴 수 없어요.</p>`,
+      ok: "지우기", no: "취소",
+      onOk: async () => {
+        const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 이 게임 기록을 지워요.",
+          (pin) => sb("rpc/holdem_delete_game", { p_pin: pin, p_game_id: g.id }));
+        if (!res) return;
+        if (state.savedId === g.id) { state.savedId = null; state.savedSig = null; save(); renderCloud(); }
+        toast("게임 기록을 지웠어요"); loadRank();
+      }
+    });
+  });
+  $("rankCopy").addEventListener("click", () => {
+    if (!rankRows.length) { toast("복사할 랭킹이 없어요"); return; }
+    const text = [`[${monthLabel()} 나나덤 랭킹]`]
+      .concat(rankRows.map((p) => `${p.no}위 ${p.name} ${fmt(p.total)}점 (${p.games}게임${p.wins ? ", 1등 " + p.wins + "회" : ""})`))
+      .join("\n");
+    const fallback = () => {
+      $("fallback").hidden = false; route(true);
+      const ta = $("fallbackText"); ta.value = text; ta.focus(); ta.select();
+    };
+    try { navigator.clipboard.writeText(text).then(() => toast("랭킹을 복사했어요"), fallback); } catch (e) { fallback(); }
+  });
+
+  /* ---------- 화면 전환 (#ranking) ---------- */
+  function route(forceSheet) {
+    const rank = !forceSheet && location.hash === "#ranking";
+    $("viewSheet").hidden = rank; $("viewRank").hidden = !rank;
+    $("tabSheet").classList.toggle("on", !rank); $("tabRank").classList.toggle("on", rank);
+    $("tabSheet").setAttribute("aria-current", rank ? "false" : "page");
+    $("tabRank").setAttribute("aria-current", rank ? "page" : "false");
+    if (rank && rankStale) loadRank();
+  }
+  window.addEventListener("hashchange", () => route());
+
   /* ---------- boot ---------- */
   if (T().idx > last()) T().idx = last();
+  if (!state.day) state.day = isoDay(state.start || Date.now());
   renderHeader();
   buildSeats();
   refresh();
@@ -999,6 +1371,8 @@ details.struct[open] summary::after { content: "접기"; }
   tick();
   setInterval(tick, 250);
   if (state.start && !state.end) keepAwake(true);
+  route();
+  loadNames();
 })();
 </script>
 </body>
