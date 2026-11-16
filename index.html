@@ -256,7 +256,7 @@ details.struct[open] summary::after { content: "접기"; }
 <div class="mini" id="mini" aria-hidden="true">
   <span class="lv-chip" id="m-lv">레벨 1</span>
   <span class="mb" id="m-bl">100 / 200</span>
-  <span class="mc" id="m-ct">15:00</span>
+  <span class="mc" id="m-ct">10:00</span>
   <button type="button" id="m-btn" tabindex="-1">일시정지</button>
 </div>
 
@@ -278,7 +278,7 @@ details.struct[open] summary::after { content: "접기"; }
       <span class="k" id="t-bk">스몰 / 빅 블라인드</span>
       <span class="v" id="t-bl">100 / 200</span>
     </div>
-    <div class="count paused" id="t-ct" role="timer" aria-live="off">15:00</div>
+    <div class="count paused" id="t-ct" role="timer" aria-live="off">10:00</div>
     <div class="bar"><i id="t-bar"></i></div>
     <div class="t-ctrl">
       <button class="btn-side" id="t-prev" type="button">◀ 이전</button>
@@ -330,7 +330,7 @@ details.struct[open] summary::after { content: "접기"; }
         <button class="btn-line" id="addBrk" type="button">휴식 추가</button>
       </div>
       <div class="struct-tools">
-        <label class="all-min">모든 레벨 <input id="allMin" inputmode="numeric" value="15" aria-label="모든 레벨 시간(분)"> 분으로</label>
+        <label class="all-min">모든 레벨 <input id="allMin" inputmode="numeric" value="10" aria-label="모든 레벨 시간(분)"> 분으로</label>
         <button class="btn-line" id="allMinBtn" type="button">적용</button>
       </div>
       <div class="struct-tools">
@@ -350,7 +350,7 @@ details.struct[open] summary::after { content: "접기"; }
   const RANK_BONUS = { 1: 4, 2: 2, 3: 1, 4: 1 };
   const DEALER_BONUS = 0.5;
   const KEY = "holdem-record-v2";
-  const STRUCT_KEY = "holdem-blinds-v1";
+  const STRUCT_KEY = "holdem-blinds-v2";
   const $ = (id) => document.getElementById(id);
 
   const todayStr = () => {
@@ -363,13 +363,15 @@ details.struct[open] summary::after { content: "접기"; }
     date: todayStr(), table: "", start: null, end: null, timer: blankTimer(),
     seats: Array.from({ length: SEATS }, () => ({ name: "", rank: "", mission: "", draw: "" }))
   });
-  const L = (sb, bb, min = 15) => ({ sb, bb, min });
+  const L = (sb, bb, min = 10) => ({ sb, bb, min });
   const B = (min = 10) => ({ brk: true, min });
   const defaultStruct = () => ({
     sound: true,
-    levels: [L(100, 200), L(200, 400), L(300, 600), L(400, 800), B(),
-             L(500, 1000), L(700, 1400), L(1000, 2000), L(1500, 3000), B(),
-             L(2000, 4000), L(3000, 6000), L(5000, 10000)]
+    /* 나나츄 홀드엄 타이머와 같은 구조: 20레벨, 레벨당 10분, 휴식 없음 */
+    levels: [L(100, 200), L(200, 400), L(300, 600), L(400, 800), L(600, 1200),
+             L(800, 1600), L(1000, 2000), L(1500, 3000), L(2000, 4000), L(3000, 6000),
+             L(4000, 8000), L(6000, 12000), L(8000, 16000), L(10000, 20000), L(15000, 30000),
+             L(20000, 40000), L(30000, 60000), L(40000, 80000), L(50000, 100000), L(60000, 120000)]
   });
 
   function load(key, fallback) {
@@ -634,7 +636,7 @@ details.struct[open] summary::after { content: "접기"; }
   $("addLv").addEventListener("click", () => {
     const last = [...struct.levels].reverse().find((x) => !x.brk) || L(50, 100);
     const bb = nice(n0(last.bb) * 1.5 || 200);
-    const lastMin = n0(struct.levels[struct.levels.length - 1].min) || 15;
+    const lastMin = n0(struct.levels[struct.levels.length - 1].min) || 10;
     struct.levels.push(L(bb / 2, bb, last.min || lastMin));
     renderStruct(); renderTimer(); save();
   });
