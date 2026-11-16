@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131917">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="홀덤 기록표">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+<title>홀덤 기록표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: one column of seat blocks on a dark felt ground. Each seat block: seat no. | 이름 over 미션번호 | 등수 over 뽑기점수 | 당일총점. Single dark look on purpose (card table at night). */
+:root {
+  --felt: #131917;
+  --rail: #1b2320;
+  --line: #29332f;
+  --well: #101513;
+  --chalk: #e8efeb;
+  --muted: #8b9b94;
+  --faint: #55645d;
+  --green: #5cc08f;
+  --green-ink: #0d2419;
+  --gold: #f0a93b;
+  --gold-bg: #362b14;
+  --red: #f27a72;
+  --font: "Noto Sans KR", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--felt);
+  color: var(--chalk);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-block: 18px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 14px;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+/* header */
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.02em; display: flex; align-items: center; gap: 6px; }
+h1 .suit { font-size: 24px; }
+.meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.meta input {
+  width: 92px; background: var(--well); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 8px; font-size: 16px; text-align: center; color: var(--chalk);
+}
+.meta input::placeholder { color: var(--muted); }
+
+/* game clock */
+.clock {
+  background: var(--rail); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 10px; align-items: center;
+}
+.clock .cell { display: grid; gap: 1px; min-width: 0; }
+.clock .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+.clock .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.clock .v.dim { color: #4c5a54; }
+.clock .v.live { color: var(--green); }
+.clock .actions { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
+.btn-main {
+  flex: 1; border: 0; border-radius: 11px; padding: 13px 14px; font-size: 16px; font-weight: 700;
+  background: var(--green); color: var(--green-ink);
+}
+.btn-main.stop { background: var(--gold); color: #2a1c03; }
+.btn-main:disabled { background: var(--well); color: var(--muted); border: 1px solid var(--line); cursor: default; }
+.btn-text { background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; padding: 8px 4px; }
+
+/* seats */
+.board { background: var(--rail); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.cols {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 76px 58px;
+  column-gap: 6px;
+}
+@media (min-width: 560px) {
+  .cols { grid-template-columns: 56px minmax(0, 1fr) 110px 80px; column-gap: 8px; }
+}
+.board-head {
+  background: var(--green); color: var(--green-ink); font-size: 12px; font-weight: 700;
+  padding: 8px 10px; text-align: center; line-height: 1.25; align-items: center;
+}
+.seat {
+  grid-template-areas: "num name rank total" "num mission draw total";
+  row-gap: 6px; padding: 10px; border-top: 1px solid var(--line);
+}
+.seat.dealer { background: var(--gold-bg); }
+.num {
+  grid-area: num; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums;
+}
+.num small { font-size: 11px; font-weight: 700; color: var(--gold); line-height: 1; }
+.seat input {
+  width: 100%; min-width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 10px;
+  padding: 9px 6px; font-size: 16px; text-align: center; font-variant-numeric: tabular-nums; outline: 0;
+}
+.seat input:focus { border-color: var(--green); }
+.seat input.bad { border-color: var(--red); }
+.seat input::placeholder { color: var(--faint); font-size: 14px; }
+.in-name { grid-area: name; }
+.in-mission { grid-area: mission; }
+.in-rank { grid-area: rank; }
+.in-draw { grid-area: draw; }
+.total {
+  grid-area: total; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-left: 1px solid var(--line); gap: 2px;
+}
+.total b { font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.total b.empty { color: #4c5a54; }
+.total small { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.3; }
+.warn { grid-column: 2 / -1; font-size: 11px; color: var(--red); }
+.warn:empty { display: none; }
+
+/* footer */
+.rule {
+  font-size: 12px; color: var(--muted); background: var(--rail); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px 12px; line-height: 1.6;
+}
+.rule b { color: var(--chalk); font-weight: 700; }
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.saved { font-size: 12px; color: var(--muted); }
+.foot .btns { display: flex; gap: 8px; }
+.btn-line {
+  background: none; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+  font-size: 14px; font-weight: 700; color: var(--chalk);
+}
+.btn-line.danger { border-color: var(--red); color: var(--red); }
+.btn-line.danger.armed { background: var(--red); color: #2b0c0a; }
+
+/* copy fallback + toast */
+.fallback { display: grid; gap: 6px; }
+.fallback textarea {
+  width: 100%; min-height: 180px; background: var(--well); color: var(--chalk);
+  border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 14px/1.5 var(--font);
+}
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--chalk); color: var(--felt); font-weight: 700; font-size: 14px;
+  padding: 10px 16px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1><span class="suit">♠</span>홀덤 기록표</h1>
+    <div class="meta">
+      <span id="date"></span>
+      <input id="table" placeholder="테이블" aria-label="테이블 이름">
+    </div>
+  </header>
+
+  <section class="clock" aria-label="게임 시간">
+    <div class="cell"><span class="k">시작</span><span class="v" id="t-start">--:--</span></div>
+    <div class="cell"><span class="k">종료</span><span class="v" id="t-end">--:--</span></div>
+    <div class="cell"><span class="k">진행 시간</span><span class="v" id="t-dur">0:00</span></div>
+    <div class="actions">
+      <button class="btn-main" id="clockBtn" type="button">게임 시작</button>
+      <button class="btn-text" id="clockUndo" type="button" hidden>종료 취소</button>
+    </div>
+  </section>
+
+  <section class="board" aria-label="자리별 기록">
+    <div class="board-head cols">
+      <span>자리</span><span>이름<br>미션번호</span><span>등수<br>뽑기점수</span><span>당일<br>총점</span>
+    </div>
+    <div id="seats"></div>
+  </section>
+
+  <div class="rule">
+    <b>당일총점</b> = 참가 기본 1점 + 등수 보너스(1등 +4, 2등 +2, 3·4등 +1) + 딜러(4번 자리) +0.5 + 뽑기점수
+  </div>
+
+  <div class="foot">
+    <span class="saved" id="saved">입력하면 이 폰에 자동 저장돼요</span>
+    <div class="btns">
+      <button class="btn-line" id="copyBtn" type="button">결과 복사</button>
+      <button class="btn-line danger" id="resetBtn" type="button">전체 초기화</button>
+    </div>
+  </div>
+
+  <div class="fallback" id="fallback" hidden>
+    <p class="saved">자동 복사가 막혀 있어요. 아래 글을 길게 눌러 복사하세요.</p>
+    <textarea id="fallbackText" readonly></textarea>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  const SEATS = 8;
+  const DEALER_SEAT = 4;
+  const BASE = 1;
+  const RANK_BONUS = { 1: 4, 2: 2, 3: 1, 4: 1 };
+  const DEALER_BONUS = 0.5;
+  const KEY = "holdem-record-v2";
+  const $ = (id) => document.getElementById(id);
+
+  const todayStr = () => {
+    const d = new Date();
+    const w = "일월화수목금토"[d.getDay()];
+    return `${d.getMonth() + 1}월 ${d.getDate()}일 (${w})`;
+  };
+  const blankState = () => ({
+    date: todayStr(), table: "", start: null, end: null,
+    seats: Array.from({ length: SEATS }, () => ({ name: "", rank: "", mission: "", draw: "" }))
+  });
+
+  let state = (() => {
+    try { const raw = localStorage.getItem(KEY); if (raw) return Object.assign(blankState(), JSON.parse(raw)); } catch (e) {}
+    return blankState();
+  })();
+
+  let saveTimer;
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      $("saved").textContent = "자동 저장됨 · " + hhmm(Date.now());
+    } catch (e) {
+      $("saved").textContent = "이 브라우저에서는 저장이 안 돼요. 창을 닫지 마세요.";
+    }
+  }
+  function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 250); }
+
+  const hhmm = (t) => { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+  const dur = (ms) => { const m = Math.max(0, Math.floor(ms / 60000)); return Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0"); };
+  const durKo = (ms) => { const m = Math.max(0, Math.floor(ms / 60000)); const h = Math.floor(m / 60); return (h ? h + "시간 " : "") + (m % 60) + "분"; };
+  const fmt = (n) => String(Math.round(n * 10) / 10);
+
+  /* 뽑기점수: 글자로 적은 숫자를 읽어서 더함. "3", "2.5", "3+2", "-1" 모두 됨 */
+  function drawPoints(text) {
+    const nums = String(text).replace(/,/g, ".").match(/[+-]?\s*\d+(?:\.\d+)?/g);
+    return nums ? nums.reduce((a, s) => a + parseFloat(s.replace(/\s/g, "")), 0) : 0;
+  }
+  const isPlaying = (s) => s.name.trim() !== "" || s.rank !== "" || s.mission.trim() !== "" || s.draw.trim() !== "";
+  function score(s, seatNo) {
+    if (!isPlaying(s)) return null;
+    return BASE + (RANK_BONUS[parseInt(s.rank, 10)] || 0) + (seatNo === DEALER_SEAT ? DEALER_BONUS : 0) + drawPoints(s.draw);
+  }
+
+  /* ---------- seats ---------- */
+  const seatEls = [];
+  function buildSeats() {
+    const box = $("seats");
+    box.innerHTML = "";
+    seatEls.length = 0;
+    for (let i = 0; i < SEATS; i++) {
+      const no = i + 1;
+      const row = document.createElement("div");
+      row.className = "seat cols" + (no === DEALER_SEAT ? " dealer" : "");
+      row.innerHTML = `
+        <div class="num">${no}${no === DEALER_SEAT ? "<small>딜러</small>" : ""}</div>
+        <input class="in-name" id="n${i}" placeholder="이름" autocomplete="off" aria-label="${no}번 이름">
+        <input class="in-rank" id="r${i}" placeholder="등수" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="${no}번 등수">
+        <input class="in-mission" id="m${i}" placeholder="미션번호" autocomplete="off" aria-label="${no}번 미션번호">
+        <input class="in-draw" id="d${i}" placeholder="뽑기점수" autocomplete="off" aria-label="${no}번 뽑기점수">
+        <div class="total"><b class="empty">–</b><small>총점</small></div>
+        <div class="warn"></div>`;
+      box.appendChild(row);
+      const el = {
+        name: row.querySelector("#n" + i), rank: row.querySelector("#r" + i),
+        mission: row.querySelector("#m" + i), draw: row.querySelector("#d" + i),
+        total: row.querySelector(".total b"), warn: row.querySelector(".warn")
+      };
+      ["name", "rank", "mission", "draw"].forEach((k) => {
+        el[k].value = state.seats[i][k];
+        el[k].addEventListener("input", () => {
+          if (k === "rank") el.rank.value = el.rank.value.replace(/[^0-9]/g, "");
+          state.seats[i][k] = el[k].value;
+          refresh(); saveSoon();
+        });
+      });
+      seatEls.push(el);
+    }
+  }
+
+  function refresh() {
+    const counts = {};
+    state.seats.forEach((s) => { if (s.rank !== "") counts[s.rank] = (counts[s.rank] || 0) + 1; });
+    seatEls.forEach((el, i) => {
+      const s = state.seats[i];
+      const t = score(s, i + 1);
+      el.total.textContent = t === null ? "–" : fmt(t);
+      el.total.classList.toggle("empty", t === null);
+
+      const msgs = [];
+      const r = parseInt(s.rank, 10);
+      const dup = s.rank !== "" && counts[s.rank] > 1;
+      const out = s.rank !== "" && !(r >= 1 && r <= SEATS);
+      el.rank.classList.toggle("bad", dup || out);
+      if (dup) msgs.push(`${s.rank}등이 겹쳐요`);
+      if (out) msgs.push(`등수는 1~${SEATS}`);
+      const badDraw = s.draw.trim() !== "" && !/\d/.test(s.draw);
+      el.draw.classList.toggle("bad", badDraw);
+      if (badDraw) msgs.push("뽑기점수에 숫자가 없어요");
+      el.warn.textContent = msgs.join(" · ");
+    });
+  }
+
+  /* ---------- clock ---------- */
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && !wakeLock && navigator.wakeLock && document.visibilityState === "visible") {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => { wakeLock = null; });
+      } else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch (e) { wakeLock = null; }
+  }
+  document.addEventListener("visibilitychange", () => { if (state.start && !state.end) keepAwake(true); });
+
+  function renderClock() {
+    const s = $("t-start"), e = $("t-end"), d = $("t-dur"), btn = $("clockBtn");
+    s.textContent = state.start ? hhmm(state.start) : "--:--";
+    s.classList.toggle("dim", !state.start);
+    e.textContent = state.end ? hhmm(state.end) : "--:--";
+    e.classList.toggle("dim", !state.end);
+    const running = state.start && !state.end;
+    d.textContent = state.start ? dur((state.end || Date.now()) - state.start) : "0:00";
+    d.classList.toggle("live", !!running);
+    d.classList.toggle("dim", !state.start);
+    btn.classList.toggle("stop", !!running);
+    btn.disabled = !!state.end;
+    btn.textContent = !state.start ? "게임 시작" : running ? "게임 종료" : "게임 끝남 · " + durKo(state.end - state.start);
+    $("clockUndo").hidden = !state.end;
+  }
+  $("clockBtn").addEventListener("click", () => {
+    if (!state.start) { state.start = Date.now(); toast("게임 시작 " + hhmm(state.start)); keepAwake(true); }
+    else if (!state.end) { state.end = Date.now(); toast("게임 종료 " + hhmm(state.end)); keepAwake(false); }
+    renderClock(); save();
+  });
+  $("clockUndo").addEventListener("click", () => { state.end = null; renderClock(); save(); keepAwake(true); });
+  setInterval(() => { if (state.start && !state.end) renderClock(); }, 15000);
+
+  /* ---------- header ---------- */
+  function renderHeader() { $("date").textContent = state.date; $("table").value = state.table; }
+  $("table").addEventListener("input", (e) => { state.table = e.target.value; saveSoon(); });
+
+  /* ---------- copy ---------- */
+  /* [날짜 나나덤 점수기록] 다음 줄부터 등수 순서로: 1등 이름 총 7점 / 미션 1,3 */
+  function resultText() {
+    const day = state.date.replace(/\s*\(.\)$/, "");
+    const players = state.seats
+      .map((s, i) => ({ s, t: score(s, i + 1), seat: i + 1, r: parseInt(s.rank, 10) }))
+      .filter((p) => p.t !== null)
+      .sort((a, b) => (a.r || 99) - (b.r || 99) || a.seat - b.seat);
+    const lines = [`[${day} 나나덤 점수기록]`];
+    players.forEach((p) => {
+      const parts = [p.r ? `${p.r}등` : "등수없음", p.s.name.trim() || `${p.seat}번자리`];
+      lines.push(`${parts.join(" ")} 총 ${fmt(p.t)}점 / 미션 ${p.s.mission.trim() || "-"}`);
+    });
+    return lines.join("\n");
+  }
+  $("copyBtn").addEventListener("click", () => {
+    const text = resultText();
+    const fallback = () => {
+      $("fallback").hidden = false;
+      const ta = $("fallbackText"); ta.value = text; ta.focus(); ta.select();
+    };
+    try {
+      navigator.clipboard.writeText(text).then(() => { $("fallback").hidden = true; toast("복사했어요. 카톡에 붙여넣으세요"); }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  /* ---------- reset (tap twice) ---------- */
+  let armTimer;
+  $("resetBtn").addEventListener("click", (e) => {
+    const b = e.currentTarget;
+    if (!b.classList.contains("armed")) {
+      b.classList.add("armed"); b.textContent = "한 번 더 누르면 초기화";
+      clearTimeout(armTimer);
+      armTimer = setTimeout(() => { b.classList.remove("armed"); b.textContent = "전체 초기화"; }, 3000);
+      return;
+    }
+    clearTimeout(armTimer);
+    b.classList.remove("armed"); b.textContent = "전체 초기화";
+    state = blankState();
+    keepAwake(false);
+    $("fallback").hidden = true;
+    renderHeader(); buildSeats(); refresh(); renderClock();
+    save(); toast("초기화했어요");
+  });
+
+  /* ---------- toast ---------- */
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  }
+
+  renderHeader();
+  buildSeats();
+  refresh();
+  renderClock();
+  if (state.start && !state.end) keepAwake(true);
+})();
+</script>
+</body>
+</html>
