@@ -245,6 +245,54 @@ details.struct[open] summary::after { content: "접기"; }
   white-space: nowrap;
 }
 .toast.show { opacity: 1; }
+/* timer status pills */
+.t-info { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.pill {
+  font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
+  background: var(--well); border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+}
+.pill b { color: var(--chalk); font-variant-numeric: tabular-nums; }
+.pill.rb-open { color: var(--green); border-color: #2f5c47; }
+.pill.rb-last { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); }
+.pill.rb-closed { color: var(--red); border-color: #6b3532; }
+
+/* rebuy toggle in structure editor */
+.rb-tog {
+  border: 1px solid var(--line); background: none; border-radius: 8px; padding: 6px 0;
+  font-size: 12px; font-weight: 700; color: var(--faint);
+}
+.rb-tog.on { background: var(--red); border-color: var(--red); color: #2b0c0a; }
+.out-rule { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; }
+.out-rule div { background: var(--well); border: 1px solid var(--line); border-radius: 8px; padding: 6px 2px; font-size: 12px; color: var(--muted); }
+.out-rule b { display: block; color: var(--chalk); font-size: 15px; }
+
+/* confirm / notice dialog */
+.modal {
+  position: fixed; inset: 0; z-index: 40; background: rgba(5, 8, 7, 0.72);
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px))
+           calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.sheet {
+  width: 100%; max-width: 400px; background: var(--rail); border: 1px solid var(--line);
+  border-radius: 18px; padding: 18px; display: grid; gap: 12px;
+}
+.sheet h2 { margin: 0; font-size: 19px; font-weight: 900; text-wrap: balance; }
+.sheet h2.alert { color: var(--red); font-size: 24px; text-align: center; }
+.sheet p { margin: 0; font-size: 14px; color: var(--muted); }
+.sheet p.big { font-size: 16px; color: var(--chalk); text-align: center; }
+.chg { background: var(--well); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.chg .k { font-size: 12px; color: var(--muted); }
+.chg .v { font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.chg .v i { font-style: normal; color: var(--muted); padding: 0 4px; }
+.chg .v b { color: var(--green); }
+.chg small { font-size: 12px; color: var(--muted); }
+.sheet .acts { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.sheet .acts.one { grid-template-columns: 1fr; }
+.sheet .acts button { border-radius: 11px; padding: 13px 8px; font-size: 15px; font-weight: 700; }
+.sheet .ok { border: 0; background: var(--green); color: var(--green-ink); }
+.sheet .no { border: 1px solid var(--line); background: var(--well); }
+
 @media (prefers-reduced-motion: reduce) {
   .toast, .mini { transition: none; }
   .timer.flash { animation: none; }
@@ -280,6 +328,10 @@ details.struct[open] summary::after { content: "접기"; }
     </div>
     <div class="count paused" id="t-ct" role="timer" aria-live="off">10:00</div>
     <div class="bar"><i id="t-bar"></i></div>
+    <div class="t-info">
+      <span class="pill" id="t-dur">레벨 시간 <b>10분</b></span>
+      <span class="pill" id="t-rb" hidden></span>
+    </div>
     <div class="t-ctrl">
       <button class="btn-side" id="t-prev" type="button">◀ 이전</button>
       <button class="btn-main" id="t-main" type="button">게임 시작</button>
@@ -323,15 +375,24 @@ details.struct[open] summary::after { content: "접기"; }
   <details class="struct" id="struct">
     <summary>블라인드 구조</summary>
     <div class="struct-body">
-      <p>레벨 번호를 누르면 그 레벨로 바로 넘어가요. 지금 진행 중인 레벨의 시간을 바꾸면 다음 레벨부터 적용돼요. 구조는 전체 초기화해도 남아요.</p>
+      <div>
+        <p>레벨 시간은 10분으로 시작해서, 탈락자 등수를 입력하면 줄어요. 8등 입력 때만 블라인드가 바로 한 단계 올라가요.</p>
+        <div class="out-rule" style="margin-top:8px">
+          <div>8등 탈락<b>7분</b>+블라인드 업</div>
+          <div>7등 탈락<b>6분</b></div>
+          <div>6등 탈락<b>6분</b></div>
+          <div>5등부터<b>5분</b></div>
+        </div>
+      </div>
+      <div class="struct-tools">
+        <label class="all-min">지금 레벨 시간 <input id="curDur" inputmode="decimal" aria-label="지금 레벨 시간(분)"> 분</label>
+        <button class="btn-line" id="curDurBtn" type="button">바꾸기</button>
+      </div>
+      <p>레벨 번호를 누르면 그 레벨로 바로 넘어가요. 리바인 칸의 '마감'은 그 레벨이 끝나면 리바인이 막힌다는 뜻이에요. 구조는 전체 초기화해도 남아요.</p>
       <div class="lv-list" id="lvList"></div>
       <div class="struct-tools">
         <button class="btn-line" id="addLv" type="button">레벨 추가</button>
         <button class="btn-line" id="addBrk" type="button">휴식 추가</button>
-      </div>
-      <div class="struct-tools">
-        <label class="all-min">모든 레벨 <input id="allMin" inputmode="numeric" value="10" aria-label="모든 레벨 시간(분)"> 분으로</label>
-        <button class="btn-line" id="allMinBtn" type="button">적용</button>
       </div>
       <div class="struct-tools">
         <button class="btn-line" id="soundBtn" type="button">알림 소리 켜짐</button>
@@ -339,6 +400,16 @@ details.struct[open] summary::after { content: "접기"; }
       </div>
     </div>
   </details>
+</div>
+<div class="modal" id="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <h2 id="mTitle"></h2>
+    <div id="mBody" style="display:grid;gap:8px"></div>
+    <div class="acts" id="mActs">
+      <button class="no" id="mNo" type="button">등수만 입력</button>
+      <button class="ok" id="mOk" type="button">적용</button>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -349,8 +420,12 @@ details.struct[open] summary::after { content: "접기"; }
   const BASE = 1;
   const RANK_BONUS = { 1: 4, 2: 2, 3: 1, 4: 1 };
   const DEALER_BONUS = 0.5;
+  /* 블라인드 레벨 시간: 10분으로 시작, 탈락 등수를 입력하면 줄어듦. 8등 입력 때만 블라인드 업 */
+  const START_MIN = 10;
+  const OUT_MIN = { 8: 7, 7: 6, 6: 6, 5: 5, 4: 5, 3: 5, 2: 5, 1: 5 };
+  const BLINDUP_RANK = 8;
   const KEY = "holdem-record-v2";
-  const STRUCT_KEY = "holdem-blinds-v2";
+  const STRUCT_KEY = "holdem-blinds-v3";
   const $ = (id) => document.getElementById(id);
 
   const todayStr = () => {
@@ -358,20 +433,20 @@ details.struct[open] summary::after { content: "접기"; }
     const w = "일월화수목금토"[d.getDay()];
     return `${d.getMonth() + 1}월 ${d.getDate()}일 (${w})`;
   };
-  const blankTimer = () => ({ idx: 0, running: false, endsAt: null, remain: null });
+  const blankTimer = () => ({ idx: 0, running: false, endsAt: null, remain: null, levelLen: null, dur: START_MIN, applied: {} });
   const blankState = () => ({
     date: todayStr(), table: "", start: null, end: null, timer: blankTimer(),
     seats: Array.from({ length: SEATS }, () => ({ name: "", rank: "", mission: "", draw: "" }))
   });
-  const L = (sb, bb, min = 10) => ({ sb, bb, min });
+  const L = (sb, bb, extra) => Object.assign({ sb, bb }, extra || {});
   const B = (min = 10) => ({ brk: true, min });
   const defaultStruct = () => ({
     sound: true,
-    /* 나나츄 홀드엄 타이머와 같은 구조: 20레벨, 레벨당 10분, 휴식 없음 */
+    /* 나나츄 홀드엄과 같은 블라인드 + 2,000/4,000 뒤 10분 휴식, 3,000/6,000 끝나면 리바인 마감 */
     levels: [L(100, 200), L(200, 400), L(300, 600), L(400, 800), L(600, 1200),
-             L(800, 1600), L(1000, 2000), L(1500, 3000), L(2000, 4000), L(3000, 6000),
-             L(4000, 8000), L(6000, 12000), L(8000, 16000), L(10000, 20000), L(15000, 30000),
-             L(20000, 40000), L(30000, 60000), L(40000, 80000), L(50000, 100000), L(60000, 120000)]
+             L(800, 1600), L(1000, 2000), L(1500, 3000), L(2000, 4000), B(10),
+             L(3000, 6000, { rebuy: true }), L(4000, 8000), L(6000, 12000), L(8000, 16000), L(10000, 20000),
+             L(15000, 30000), L(20000, 40000), L(30000, 60000), L(40000, 80000), L(50000, 100000), L(60000, 120000)]
   });
 
   function load(key, fallback) {
@@ -406,14 +481,20 @@ details.struct[open] summary::after { content: "접기"; }
   };
   const n0 = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
   const money = (n) => n0(n).toLocaleString("ko-KR");
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   /* ======================= blind timer ======================= */
   const T = () => state.timer;
   const lv = (i) => struct.levels[i];
-  const levelMs = (i) => Math.max(0.1, n0(lv(i) && lv(i).min)) * 60000;
+  const last = () => struct.levels.length - 1;
+  const lenFor = (i) => (lv(i).brk ? Math.max(0.1, n0(lv(i).min)) : Math.max(0.1, n0(T().dur))) * 60000;
+  const curLen = () => T().levelLen || lenFor(T().idx);
   const levelNo = (i) => struct.levels.slice(0, i + 1).filter((x) => !x.brk).length;
-  const remaining = () => T().running ? T().endsAt - Date.now() : (T().remain == null ? levelMs(T().idx) : T().remain);
-  const blindText = (x) => x.brk ? "휴식" : `${money(x.sb)} / ${money(x.bb)}`;
+  const remaining = () => T().running ? T().endsAt - Date.now() : (T().remain == null ? curLen() : T().remain);
+  const fresh = () => !T().running && T().remain == null;     // 현재 레벨이 아직 시작 전
+  const blindText = (x) => x.brk ? `휴식 ${n0(x.min)}분` : `${money(x.sb)} / ${money(x.bb)}`;
+  const levelName = (i) => lv(i).brk ? "휴식" : `레벨 ${levelNo(i)}`;
+  const rebuyIdx = () => struct.levels.findIndex((x) => x.rebuy && !x.brk);
 
   /* sound */
   let audio = null;
@@ -445,7 +526,9 @@ details.struct[open] summary::after { content: "접기"; }
   function startTimer() {
     const t = T();
     if (t.running) return;
-    t.endsAt = Date.now() + remaining();
+    const rem = remaining();
+    t.levelLen = curLen();
+    t.endsAt = Date.now() + rem;
     t.running = true; t.remain = null;
   }
   function pauseTimer() {
@@ -454,12 +537,24 @@ details.struct[open] summary::after { content: "접기"; }
     t.remain = Math.max(0, t.endsAt - Date.now());
     t.running = false; t.endsAt = null;
   }
-  function gotoLevel(i) {
-    const t = T();
-    t.idx = Math.max(0, Math.min(struct.levels.length - 1, i));
+  /* 레벨 이동(수동·블라인드 업 공통). 새 레벨은 지금 레벨 시간으로 처음부터 */
+  function setLevel(i) {
+    const t = T(), old = t.idx;
+    t.idx = Math.max(0, Math.min(last(), i));
+    t.levelLen = lenFor(t.idx);
     warnedIdx = -1;
-    if (t.running) t.endsAt = Date.now() + levelMs(t.idx); else t.remain = null;
-    renderTimer(); renderStruct(); save();
+    if (t.running) t.endsAt = Date.now() + t.levelLen; else t.remain = null;
+    if (t.idx > old) checkRebuy(old, t.idx);
+  }
+  function gotoLevel(i) { setLevel(i); renderTimer(); renderStruct(); save(); }
+
+  /* 리바인 마감 레벨을 지나가면 공지 */
+  function checkRebuy(oldIdx, newIdx) {
+    const r = rebuyIdx();
+    if (r >= 0 && oldIdx <= r && newIdx > r) {
+      beep(3, 660);
+      showNotice("리바인 마감", `<p class="big">${esc(blindText(lv(r)))} 레벨이 끝났어요.<br>지금부터 리바인할 수 없어요.</p>`);
+    }
   }
 
   let warnedIdx = -1;
@@ -467,9 +562,10 @@ details.struct[open] summary::after { content: "접기"; }
     const t = T();
     if (t.running) {
       const now = Date.now();
+      const before = t.idx;
       let changed = false;
-      while (t.endsAt <= now && t.idx < struct.levels.length - 1) {
-        t.idx++; t.endsAt += levelMs(t.idx); changed = true;
+      while (t.endsAt <= now && t.idx < last()) {
+        t.idx++; t.levelLen = lenFor(t.idx); t.endsAt += t.levelLen; changed = true;
       }
       if (t.endsAt <= now) {           // 마지막 레벨이 끝남
         t.running = false; t.endsAt = null; t.remain = 0; changed = true;
@@ -477,12 +573,14 @@ details.struct[open] summary::after { content: "접기"; }
       if (changed) {
         warnedIdx = -1;
         beep(3, 880); flash();
-        toast(t.remain === 0 ? "마지막 레벨이 끝났어요" : lv(t.idx).brk ? "휴식 시간이에요" : `레벨 ${levelNo(t.idx)} · ${blindText(lv(t.idx))}`);
+        toast(t.remain === 0 ? "마지막 레벨이 끝났어요" : lv(t.idx).brk ? "휴식 시간이에요" : `${levelName(t.idx)} · ${blindText(lv(t.idx))}`);
+        if (t.idx > before) checkRebuy(before, t.idx);
         renderStruct(); save();
       } else {
         const rem = t.endsAt - now;
-        if (rem <= 60000 && rem > 55000 && warnedIdx !== t.idx && levelMs(t.idx) > 120000) {
+        if (rem <= 60000 && rem > 55000 && warnedIdx !== t.idx && curLen() > 120000) {
           warnedIdx = t.idx; beep(1, 660);
+          if (t.idx === rebuyIdx()) toast("1분 뒤 리바인 마감");
         }
       }
     }
@@ -497,20 +595,28 @@ details.struct[open] summary::after { content: "접기"; }
     const t = T(), cur = lv(t.idx), next = lv(t.idx + 1);
     const rem = remaining();
     const started = !!state.start, ended = !!state.end;
-    const chip = cur.brk ? "휴식" : `레벨 ${levelNo(t.idx)}`;
+    const chip = levelName(t.idx);
     $("t-lv").textContent = chip; $("t-lv").classList.toggle("brk", !!cur.brk);
     $("t-bk").textContent = cur.brk ? "쉬는 시간" : "스몰 / 빅 블라인드";
-    $("t-bl").textContent = cur.brk ? `휴식 ${n0(cur.min)}분` : blindText(cur);
-    $("t-next").innerHTML = next
-      ? `다음 <b>${next.brk ? "휴식 " + n0(next.min) + "분" : blindText(next)}</b>`
-      : "마지막 레벨";
+    $("t-bl").textContent = blindText(cur);
+    $("t-next").innerHTML = next ? `다음 <b>${blindText(next)}</b>` : "마지막 레벨";
     const ct = $("t-ct");
     ct.textContent = clock(rem);
     ct.classList.toggle("paused", !t.running);
     ct.classList.toggle("warn", t.running && rem <= 60000);
-    $("t-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / levelMs(t.idx)) * 100)) + "%";
+    $("t-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / curLen()) * 100)) + "%";
     $("t-prev").disabled = t.idx === 0;
-    $("t-next-btn").disabled = t.idx >= struct.levels.length - 1;
+    $("t-next-btn").disabled = t.idx >= last();
+
+    /* 레벨 시간 · 리바인 상태 */
+    $("t-dur").innerHTML = `레벨 시간 <b>${fmt(n0(t.dur))}분</b>`;
+    const r = rebuyIdx(), rb = $("t-rb");
+    rb.hidden = r < 0;
+    if (r >= 0) {
+      rb.className = "pill " + (t.idx < r ? "rb-open" : t.idx === r ? "rb-last" : "rb-closed");
+      rb.textContent = t.idx < r ? `리바인 가능 · ${blindText(lv(r))}까지`
+        : t.idx === r ? "이번 레벨 끝나면 리바인 마감" : "리바인 마감";
+    }
 
     const main = $("t-main");
     main.disabled = ended;
@@ -534,6 +640,9 @@ details.struct[open] summary::after { content: "접기"; }
     mc.classList.toggle("warn", t.running && rem <= 60000);
     $("m-btn").textContent = t.running ? "일시정지" : "재개";
     updateMini();
+
+    const cd = $("curDur");
+    if (document.activeElement !== cd) cd.value = fmt(n0(t.dur));
   }
 
   let timerVisible = true;
@@ -576,6 +685,93 @@ details.struct[open] summary::after { content: "접기"; }
     toast("종료를 취소했어요. 재개를 누르면 타이머가 다시 가요"); renderTimer(); save();
   });
 
+  /* 레벨 시간 변경: 시작 전 레벨이면 바로, 진행 중이면 다음 레벨부터 */
+  function setDuration(min) {
+    const t = T();
+    t.dur = min;
+    if (fresh() && !lv(t.idx).brk) t.levelLen = null;
+  }
+  $("curDurBtn").addEventListener("click", () => {
+    const m = n0($("curDur").value);
+    if (m <= 0) { toast("1분 이상으로 적어 주세요"); return; }
+    const wasFresh = fresh();
+    setDuration(m); renderTimer(); save();
+    toast(wasFresh ? `레벨 시간을 ${fmt(m)}분으로 바꿨어요` : `다음 레벨부터 ${fmt(m)}분이에요`);
+  });
+
+  /* ---------- 탈락 등수 입력 → 블라인드 업 / 레벨 시간 단축 ---------- */
+  function outEffect(rank) {
+    const t = T();
+    if (!state.start || state.end || t.applied[rank]) return null;
+    const newDur = OUT_MIN[rank] != null ? Math.min(n0(t.dur), OUT_MIN[rank]) : n0(t.dur);
+    const up = rank === BLINDUP_RANK && t.idx < last();
+    if (!up && newDur === n0(t.dur)) return null;
+    return { rank, up, newDur, oldDur: n0(t.dur) };
+  }
+  function askOut(eff, seatNo, input) {
+    const t = T(), name = state.seats[seatNo - 1].name.trim() || `${seatNo}번 자리`;
+    let body = "";
+    if (eff.up) {
+      body += `<div class="chg"><span class="k">블라인드 즉시 업</span>
+        <div class="v">${esc(blindText(lv(t.idx)))}<i>→</i><b>${esc(blindText(lv(t.idx + 1)))}</b></div>
+        <small>지금 바로 ${esc(levelName(t.idx + 1))} 시작</small></div>`;
+    }
+    if (eff.newDur !== eff.oldDur) {
+      const when = eff.up ? "새 레벨부터 바로 적용" : fresh() ? "지금 레벨부터 바로 적용" : "지금 레벨은 남은 시간 그대로, 다음 레벨부터 적용";
+      body += `<div class="chg"><span class="k">레벨 시간 단축</span>
+        <div class="v">${fmt(eff.oldDur)}분<i>→</i><b>${fmt(eff.newDur)}분</b></div>
+        <small>${when}</small></div>`;
+    }
+    openModal({
+      title: `${eff.rank}등 탈락 · ${esc(name)}`,
+      body, ok: "적용", no: "등수만 입력",
+      onOk: () => {
+        t.applied[eff.rank] = true;
+        if (eff.newDur !== eff.oldDur) setDuration(eff.newDur);
+        if (eff.up) {
+          setLevel(t.idx + 1);
+          beep(3, 880); flash();
+          toast(`블라인드 업 · ${blindText(lv(t.idx))}`);
+        } else {
+          toast(`레벨 시간 ${fmt(eff.newDur)}분`);
+        }
+        renderTimer(); renderStruct(); save();
+      },
+      onNo: () => toast("등수만 입력했어요"),
+      returnFocus: input
+    });
+  }
+
+  /* ---------- dialog ---------- */
+  let modalCb = null;
+  function openModal({ title, body, ok, no, onOk, onNo, alert, returnFocus }) {
+    if (!$("modal").hidden) return;
+    $("mTitle").innerHTML = title;
+    $("mTitle").className = alert ? "alert" : "";
+    $("mBody").innerHTML = body;
+    $("mOk").textContent = ok || "확인";
+    $("mNo").hidden = !no; if (no) $("mNo").textContent = no;
+    $("mActs").classList.toggle("one", !no);
+    modalCb = { onOk, onNo, returnFocus };
+    $("modal").hidden = false;
+    $("mOk").focus();
+  }
+  function closeModal(okPressed) {
+    const cb = modalCb; modalCb = null;
+    $("modal").hidden = true;
+    if (cb) {
+      if (okPressed && cb.onOk) cb.onOk();
+      if (!okPressed && cb.onNo) cb.onNo();
+    }
+  }
+  function showNotice(title, body) {
+    if (!$("modal").hidden) { setTimeout(() => showNotice(title, body), 400); return; }
+    openModal({ title, body, ok: "확인", alert: true });
+  }
+  $("mOk").addEventListener("click", () => closeModal(true));
+  $("mNo").addEventListener("click", () => closeModal(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("modal").hidden) closeModal(false); });
+
   /* wake lock while the game runs */
   let wakeLock = null;
   async function keepAwake(on) {
@@ -596,15 +792,16 @@ details.struct[open] summary::after { content: "접기"; }
   function renderStruct() {
     const box = $("lvList");
     const keepFocus = document.activeElement && box.contains(document.activeElement) ? document.activeElement.id : null;
-    let html = `<div class="lv-row head"><span>레벨</span><span>스몰</span><span></span><span>빅</span><span>분</span><span></span></div>`;
+    let html = `<div class="lv-row head"><span>레벨</span><span>스몰</span><span></span><span>빅</span><span>리바인</span><span></span></div>`;
     struct.levels.forEach((x, i) => {
       const cls = "lv-row" + (x.brk ? " brk" : "") + (i === T().idx ? " current" : "");
       const no = x.brk ? "휴식" : levelNo(i);
       html += `<div class="${cls}" data-i="${i}">
         <button class="lv-no" type="button" data-go="${i}" aria-label="${x.brk ? "휴식" : "레벨 " + no}으로 이동">${no}</button>
-        ${x.brk ? `<span class="brk-label">쉬는 시간</span>`
-          : `<input id="sb${i}" data-k="sb" inputmode="numeric" value="${x.sb}" aria-label="레벨 ${no} 스몰"><span class="slash">/</span><input id="bb${i}" data-k="bb" inputmode="numeric" value="${x.bb}" aria-label="레벨 ${no} 빅">`}
-        <input id="mn${i}" data-k="min" inputmode="decimal" value="${x.min}" aria-label="${x.brk ? "휴식" : "레벨 " + no} 시간(분)">
+        ${x.brk
+          ? `<span class="brk-label">쉬는 시간 (분)</span><input id="mn${i}" data-k="min" inputmode="decimal" value="${x.min}" aria-label="휴식 시간(분)">`
+          : `<input id="sb${i}" data-k="sb" inputmode="numeric" value="${x.sb}" aria-label="레벨 ${no} 스몰"><span class="slash">/</span><input id="bb${i}" data-k="bb" inputmode="numeric" value="${x.bb}" aria-label="레벨 ${no} 빅">
+             <button class="rb-tog${x.rebuy ? " on" : ""}" type="button" data-rb="${i}" aria-pressed="${!!x.rebuy}" aria-label="레벨 ${no}이 끝나면 리바인 마감">${x.rebuy ? "마감" : "·"}</button>`}
         <button class="lv-del" type="button" data-del="${i}" aria-label="삭제" ${struct.levels.length < 2 ? "disabled" : ""}>×</button>
       </div>`;
     });
@@ -617,45 +814,41 @@ details.struct[open] summary::after { content: "접기"; }
     const i = +inp.closest(".lv-row").dataset.i, k = inp.dataset.k;
     struct.levels[i][k] = inp.value.replace(/[^0-9.]/g, "");
     if (inp.value !== struct.levels[i][k]) inp.value = struct.levels[i][k];
-    $("lvList").dataset.sig = "";      // 다음 렌더 때 새 값으로 다시 그림
+    if (i === T().idx && fresh()) T().levelLen = null;
+    $("lvList").dataset.sig = "";
     renderTimer();
     saveSoon();
   });
   $("lvList").addEventListener("click", (e) => {
-    const go = e.target.closest("[data-go]"), del = e.target.closest("[data-del]");
-    if (go) { unlockAudio(); gotoLevel(+go.dataset.go); toast((lv(T().idx).brk ? "휴식" : `레벨 ${levelNo(T().idx)}`) + "로 이동했어요"); }
+    const go = e.target.closest("[data-go]"), del = e.target.closest("[data-del]"), rb = e.target.closest("[data-rb]");
+    if (go) { unlockAudio(); gotoLevel(+go.dataset.go); toast(levelName(T().idx) + "로 이동했어요"); }
+    if (rb) {
+      const i = +rb.dataset.rb, on = !struct.levels[i].rebuy;
+      struct.levels.forEach((x) => { delete x.rebuy; });
+      if (on) struct.levels[i].rebuy = true;
+      renderStruct(); renderTimer(); save();
+      toast(on ? `${blindText(struct.levels[i])} 끝나면 리바인 마감` : "리바인 마감 없음");
+    }
     if (del && struct.levels.length > 1) {
       const i = +del.dataset.del;
       struct.levels.splice(i, 1);
       const t = T();
       if (i < t.idx) t.idx--;
-      else if (i === t.idx) { t.idx = Math.min(t.idx, struct.levels.length - 1); if (t.running) t.endsAt = Date.now() + levelMs(t.idx); else t.remain = null; }
+      else if (i === t.idx) { t.idx = Math.min(t.idx, last()); t.levelLen = lenFor(t.idx); if (t.running) t.endsAt = Date.now() + t.levelLen; else t.remain = null; }
       renderStruct(); renderTimer(); save();
     }
   });
   $("addLv").addEventListener("click", () => {
-    const last = [...struct.levels].reverse().find((x) => !x.brk) || L(50, 100);
-    const bb = nice(n0(last.bb) * 1.5 || 200);
-    const lastMin = n0(struct.levels[struct.levels.length - 1].min) || 10;
-    struct.levels.push(L(bb / 2, bb, last.min || lastMin));
+    const lastLv = [...struct.levels].reverse().find((x) => !x.brk) || L(50, 100);
+    const bb = nice(n0(lastLv.bb) * 1.5 || 200);
+    struct.levels.push(L(bb / 2, bb));
     renderStruct(); renderTimer(); save();
   });
   $("addBrk").addEventListener("click", () => { struct.levels.push(B(10)); renderStruct(); renderTimer(); save(); });
-  $("allMinBtn").addEventListener("click", () => {
-    const m = n0($("allMin").value);
-    if (m <= 0) { toast("1분 이상으로 적어 주세요"); return; }
-    struct.levels.forEach((x) => { if (!x.brk) x.min = m; });
-    renderStruct(); renderTimer(); save(); toast(`모든 레벨을 ${m}분으로 바꿨어요`);
-  });
   function renderSound() { $("soundBtn").textContent = struct.sound ? "알림 소리 켜짐" : "알림 소리 꺼짐"; }
   $("soundBtn").addEventListener("click", () => {
     unlockAudio(); struct.sound = !struct.sound; renderSound(); save();
     if (struct.sound) beep(1, 880);
-  });
-  twoTap($("structReset"), "기본 구조로", "한 번 더 누르면 되돌려요", () => {
-    struct = defaultStruct(); T().idx = Math.min(T().idx, struct.levels.length - 1);
-    if (!T().running) T().remain = null;
-    renderStruct(); renderTimer(); renderSound(); save(); toast("기본 구조로 되돌렸어요");
   });
 
   /* ======================= score sheet ======================= */
@@ -698,6 +891,10 @@ details.struct[open] summary::after { content: "접기"; }
           if (k === "rank") el.rank.value = el.rank.value.replace(/[^0-9]/g, "");
           state.seats[i][k] = el[k].value;
           refresh(); saveSoon();
+          if (k === "rank") {
+            const eff = outEffect(parseInt(el.rank.value, 10));
+            if (eff) { el.rank.blur(); askOut(eff, no, el.rank); }
+          }
         });
       });
       seatEls.push(el);
@@ -779,16 +976,21 @@ details.struct[open] summary::after { content: "접기"; }
     renderHeader(); buildSeats(); refresh(); renderTimer(); renderStruct();
     save(); toast("초기화했어요");
   });
+  twoTap($("structReset"), "기본 구조로", "한 번 더 누르면 되돌려요", () => {
+    struct = defaultStruct(); T().idx = Math.min(T().idx, last());
+    if (fresh()) T().levelLen = null;
+    renderStruct(); renderTimer(); renderSound(); save(); toast("기본 구조로 되돌렸어요");
+  });
 
   /* ---------- toast ---------- */
   let toastTimer;
   function toast(msg) {
     const t = $("toast"); t.textContent = msg; t.classList.add("show");
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
   }
 
   /* ---------- boot ---------- */
-  if (T().idx >= struct.levels.length) T().idx = struct.levels.length - 1;
+  if (T().idx > last()) T().idx = last();
   renderHeader();
   buildSeats();
   refresh();
