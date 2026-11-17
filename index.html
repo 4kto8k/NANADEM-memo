@@ -262,9 +262,31 @@ details.struct[open] summary::after { content: "접기"; }
   font-size: 12px; font-weight: 700; color: var(--faint);
 }
 .rb-tog.on { background: var(--red); border-color: var(--red); color: #2b0c0a; }
-.out-rule { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; text-align: center; }
-.out-rule div { background: var(--well); border: 1px solid var(--line); border-radius: 8px; padding: 6px 2px; font-size: 12px; color: var(--muted); }
-.out-rule b { display: block; color: var(--chalk); font-size: 15px; }
+.out-rule { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; text-align: center; margin-top: 8px; }
+.out-rule label { display: grid; gap: 4px; font-size: 11px; color: var(--muted); line-height: 1.2; }
+.out-rule label.first { color: var(--green); }
+.out-rule input {
+  width: 100%; min-width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 2px; font-size: 16px; font-weight: 700; text-align: center; color: var(--chalk); font-variant-numeric: tabular-nums; outline: 0;
+}
+.out-rule input:focus { border-color: var(--green); }
+.out-rule input.bad { border-color: var(--red); }
+.out-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+/* time adjust */
+.t-adj { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.t-adj button {
+  border: 1px solid var(--line); background: var(--well); border-radius: 9px; padding: 8px 0;
+  font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.t-adj button.edit { color: var(--chalk); }
+.count { cursor: pointer; }
+.time-in { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; color: var(--muted); }
+.time-in input {
+  width: 76px; background: var(--well); border: 1px solid var(--line); border-radius: 10px; padding: 10px 4px;
+  font-size: 26px; font-weight: 900; text-align: center; color: var(--chalk); font-variant-numeric: tabular-nums; outline: 0;
+}
+.time-in input:focus { border-color: var(--green); }
 
 /* confirm / notice dialog */
 .modal {
@@ -394,7 +416,14 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       <span class="k" id="t-bk">스몰 / 빅 블라인드</span>
       <span class="v" id="t-bl">100 / 200</span>
     </div>
-    <div class="count paused" id="t-ct" role="timer" aria-live="off">10:00</div>
+    <div class="count paused" id="t-ct" role="timer" aria-live="off" title="눌러서 남은 시간 바꾸기">10:00</div>
+    <div class="t-adj" aria-label="남은 시간 조절">
+      <button type="button" data-adj="-60000">−1분</button>
+      <button type="button" data-adj="-10000">−10초</button>
+      <button type="button" class="edit" id="t-set">직접</button>
+      <button type="button" data-adj="10000">+10초</button>
+      <button type="button" data-adj="60000">+1분</button>
+    </div>
     <div class="bar"><i id="t-bar"></i></div>
     <div class="t-info">
       <span class="pill" id="t-dur">레벨 시간 <b>10분</b></span>
@@ -449,13 +478,15 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <summary>블라인드 구조</summary>
     <div class="struct-body">
       <div>
-        <p>레벨 시간은 10분으로 시작해서, 탈락자 등수를 입력하면 줄어요. 8등 입력 때만 블라인드가 바로 한 단계 올라가요.</p>
-        <div class="out-rule" style="margin-top:8px">
-          <div>8등 탈락<b>7분</b>+블라인드 업</div>
-          <div>7등 탈락<b>6분</b></div>
-          <div>6등 탈락<b>6분</b></div>
-          <div>5등부터<b>5분</b></div>
+        <p>레벨 시간(분)이에요. 시작 시간으로 출발해서, 탈락자 등수를 입력하면 그 칸의 시간으로 줄어요. 8등 탈락 때만 블라인드가 바로 한 단계 올라가요.</p>
+        <div class="out-rule" id="durSet">
+          <label class="first">시작<input id="durStart" data-d="start" inputmode="decimal" aria-label="시작 레벨 시간(분)"></label>
+          <label>8등 탈락<input id="dur8" data-d="8" inputmode="decimal" aria-label="8등 탈락 뒤 레벨 시간(분)"></label>
+          <label>7등 탈락<input id="dur7" data-d="7" inputmode="decimal" aria-label="7등 탈락 뒤 레벨 시간(분)"></label>
+          <label>6등 탈락<input id="dur6" data-d="6" inputmode="decimal" aria-label="6등 탈락 뒤 레벨 시간(분)"></label>
+          <label>5등부터<input id="dur5" data-d="5" inputmode="decimal" aria-label="5등 탈락부터 레벨 시간(분)"></label>
         </div>
+        <p class="out-note">여기서 바꾼 값은 다음 게임부터 기본값이 돼요. 진행 중인 게임의 레벨 시간은 아래 '지금 레벨 시간'으로 바꿔요.</p>
       </div>
       <div class="struct-tools">
         <label class="all-min">지금 레벨 시간 <input id="curDur" inputmode="decimal" aria-label="지금 레벨 시간(분)"> 분</label>
@@ -531,8 +562,6 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const RANK_BONUS = { 1: 4, 2: 2, 3: 1, 4: 1 };
   const DEALER_BONUS = 0.5;
   /* 블라인드 레벨 시간: 10분으로 시작, 탈락 등수를 입력하면 줄어듦. 8등 입력 때만 블라인드 업 */
-  const START_MIN = 10;
-  const OUT_MIN = { 8: 7, 7: 6, 6: 6, 5: 5, 4: 5, 3: 5, 2: 5, 1: 5 };
   const BLINDUP_RANK = 8;
   const KEY = "holdem-record-v2";
   const STRUCT_KEY = "holdem-blinds-v3";
@@ -543,7 +572,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const w = "일월화수목금토"[d.getDay()];
     return `${d.getMonth() + 1}월 ${d.getDate()}일 (${w})`;
   };
-  const blankTimer = () => ({ idx: 0, running: false, endsAt: null, remain: null, levelLen: null, dur: START_MIN, applied: {} });
+  const blankTimer = () => ({ idx: 0, running: false, endsAt: null, remain: null, levelLen: null, dur: null, applied: {} });
   const blankState = () => ({
     date: todayStr(), day: null, table: "", start: null, end: null, timer: blankTimer(),
     savedId: null, savedAt: null, savedSig: null,
@@ -553,6 +582,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const B = (min = 10) => ({ brk: true, min });
   const defaultStruct = () => ({
     sound: true,
+    startMin: 10,                              // 시작 레벨 시간(분)
+    outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },        // 탈락 등수별 레벨 시간(분). 5는 5등 이하 전부
     /* 나나츄 홀드엄과 같은 블라인드 + 2,000/4,000 뒤 10분 휴식, 3,000/6,000 끝나면 리바인 마감 */
     levels: [L(100, 200), L(200, 400), L(300, 600), L(400, 800), L(600, 1200),
              L(800, 1600), L(1000, 2000), L(1500, 3000), L(2000, 4000), B(10),
@@ -568,6 +599,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   state.timer = Object.assign(blankTimer(), state.timer || {});
   let struct = load(STRUCT_KEY, defaultStruct);
   if (!Array.isArray(struct.levels) || !struct.levels.length) struct = defaultStruct();
+  struct.outMin = Object.assign(defaultStruct().outMin, struct.outMin || {});
+  const startMin = () => n0(struct.startMin) > 0 ? n0(struct.startMin) : 10;
+  const outMinFor = (rank) => n0(struct.outMin[rank >= 8 ? 8 : rank === 7 ? 7 : rank === 6 ? 6 : 5]);
 
   let saveTimer;
   function save() {
@@ -810,11 +844,69 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     toast(wasFresh ? `레벨 시간을 ${fmt(m)}분으로 바꿨어요` : `다음 레벨부터 ${fmt(m)}분이에요`);
   });
 
+  /* ---------- 진행 중 남은 시간 조절 ---------- */
+  function setRemaining(ms) {
+    const t = T();
+    ms = Math.max(1000, Math.round(ms / 1000) * 1000);
+    t.levelLen = Math.max(curLen(), ms);
+    if (t.running) t.endsAt = Date.now() + ms; else t.remain = ms;
+    if (ms > 60000) warnedIdx = -1;
+    renderTimer(); save();
+  }
+  document.querySelector(".t-adj").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-adj]"); if (!b) return;
+    setRemaining(remaining() + Number(b.dataset.adj));
+    toast("남은 시간 " + clock(remaining()));
+  });
+  function editRemaining() {
+    const rem = Math.max(0, Math.ceil(remaining() / 1000));
+    openModal({
+      title: "남은 시간 바꾸기",
+      body: `<div class="time-in"><input id="setMin" inputmode="numeric" maxlength="3" value="${Math.floor(rem / 60)}" aria-label="분"> 분
+             <input id="setSec" inputmode="numeric" maxlength="2" value="${rem % 60}" aria-label="초"> 초</div>
+             <p>${esc(levelName(T().idx))} · ${esc(blindText(lv(T().idx)))}의 남은 시간이에요.${T().running ? " 바꾸는 동안에도 시간은 흘러요." : ""}</p>`,
+      ok: "바꾸기", no: "취소",
+      onOk: () => {
+        const m = parseInt($("setMin").value, 10) || 0, sec = parseInt($("setSec").value, 10) || 0;
+        if (m * 60 + sec <= 0) { toast("1초 이상으로 적어 주세요"); return; }
+        setRemaining((m * 60 + Math.min(59, sec)) * 1000);
+        toast("남은 시간 " + clock(remaining()));
+      }
+    });
+    const f = $("setMin"); f.focus(); f.select();
+  }
+  $("t-set").addEventListener("click", editRemaining);
+  $("t-ct").addEventListener("click", editRemaining);
+
+  /* ---------- 레벨 시간 기본값(시작·탈락별) ---------- */
+  function renderDurSet() {
+    const vals = { start: startMin(), 8: struct.outMin[8], 7: struct.outMin[7], 6: struct.outMin[6], 5: struct.outMin[5] };
+    $("durSet").querySelectorAll("input").forEach((inp) => {
+      if (document.activeElement !== inp) { inp.value = fmt(n0(vals[inp.dataset.d])); inp.classList.remove("bad"); }
+    });
+  }
+  $("durSet").addEventListener("input", (e) => {
+    const inp = e.target.closest("input"); if (!inp) return;
+    inp.value = inp.value.replace(/[^0-9.]/g, "");
+    const v = n0(inp.value), ok = v > 0;
+    inp.classList.toggle("bad", !ok);
+    if (!ok) return;
+    if (inp.dataset.d === "start") {
+      struct.startMin = v;
+      if (!state.start) setDuration(v);          // 게임 시작 전이면 지금 타이머에도 바로 적용
+    } else {
+      struct.outMin[inp.dataset.d] = v;
+    }
+    renderTimer(); saveSoon();
+  });
+  $("durSet").addEventListener("focusout", () => setTimeout(renderDurSet, 0));
+
   /* ---------- 탈락 등수 입력 → 블라인드 업 / 레벨 시간 단축 ---------- */
   function outEffect(rank) {
     const t = T();
     if (!state.start || state.end || t.applied[rank]) return null;
-    const newDur = OUT_MIN[rank] != null ? Math.min(n0(t.dur), OUT_MIN[rank]) : n0(t.dur);
+    const target = rank >= 1 && rank <= SEATS ? outMinFor(rank) : 0;
+    const newDur = target > 0 ? Math.min(n0(t.dur), target) : n0(t.dur);
     const up = rank === BLINDUP_RANK && t.idx < last();
     if (!up && newDur === n0(t.dur)) return null;
     return { rank, up, newDur, oldDur: n0(t.dur) };
@@ -1083,6 +1175,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   }
   twoTap($("resetBtn"), "전체 초기화", "한 번 더 누르면 초기화", () => {
     state = blankState();
+    state.timer.dur = startMin();
     keepAwake(false);
     $("fallback").hidden = true;
     state.day = isoDay(Date.now());
@@ -1092,7 +1185,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   twoTap($("structReset"), "기본 구조로", "한 번 더 누르면 되돌려요", () => {
     struct = defaultStruct(); T().idx = Math.min(T().idx, last());
     if (fresh()) T().levelLen = null;
-    renderStruct(); renderTimer(); renderSound(); save(); toast("기본 구조로 되돌렸어요");
+    if (!state.start) setDuration(startMin());
+    renderStruct(); renderDurSet(); renderTimer(); renderSound(); save(); toast("기본 구조로 되돌렸어요");
   });
 
   /* ---------- toast ---------- */
@@ -1363,6 +1457,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   /* ---------- boot ---------- */
   if (T().idx > last()) T().idx = last();
   if (!state.day) state.day = isoDay(state.start || Date.now());
+  if (state.timer.dur == null) state.timer.dur = startMin();
+  renderDurSet();
   renderHeader();
   buildSeats();
   refresh();
