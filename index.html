@@ -501,6 +501,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       </div>
       <div class="struct-tools">
         <button class="btn-line" id="soundBtn" type="button">알림 소리 켜짐</button>
+        <button class="btn-line" id="soundTest" type="button">블라인드 업 소리 듣기</button>
         <button class="btn-line danger" id="structReset" type="button">기본 구조로</button>
       </div>
     </div>
@@ -644,11 +645,49 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
   /* sound */
   let audio = null;
+  let audioOut = null;
   function unlockAudio() {
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}  // 아이폰 무음 스위치를 켜 둬도 소리 (최신 iOS)
     try {
-      if (!audio) { const C = window.AudioContext || window.webkitAudioContext; if (C) audio = new C(); }
+      if (!audio) {
+        const C = window.AudioContext || window.webkitAudioContext;
+        if (C) {
+          audio = new C();
+          const comp = audio.createDynamicsCompressor();      // 최대한 크게, 찢어지지 않게
+          comp.threshold.value = -14; comp.knee.value = 0; comp.ratio.value = 20;
+          comp.attack.value = 0.001; comp.release.value = 0.08;
+          const g = audio.createGain(); g.gain.value = 1.6;
+          comp.connect(g).connect(audio.destination);
+          audioOut = comp;
+        }
+      }
       if (audio && audio.state === "suspended") audio.resume();
-    } catch (e) { audio = null; }
+    } catch (e) { audio = null; audioOut = null; }
+  }
+  function tone(type, freq, t, dur, vol) {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.setValueAtTime(vol, t + Math.max(0.008, dur - 0.012));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(audioOut || audio.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  /* 블라인드 업: 오락실 레벨업 (띠리리링 3단 상승 + 높은 음), 약 1.5초 */
+  function levelUpSound() {
+    if (!struct.sound) return;
+    try { navigator.vibrate && navigator.vibrate([120, 60, 120, 60, 120, 60, 400]); } catch (e) {}
+    if (!audio) return;
+    try {
+      const t = audio.currentTime + 0.03, notes = [523, 659, 784, 1047, 1319];
+      for (let r = 0; r < 3; r++) {
+        const mul = Math.pow(1.122, r * 2);
+        notes.forEach((f, i) => tone("square", f * mul, t + r * 0.33 + i * 0.06, 0.055, 0.42));
+      }
+      tone("square", 2093, t + 1.0, 0.45, 0.4);
+      tone("square", 1568, t + 1.0, 0.45, 0.25);
+    } catch (e) {}
   }
   function beep(times, freq) {
     if (!struct.sound) return;
@@ -663,7 +702,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         g.gain.setValueAtTime(0.0001, st);
         g.gain.exponentialRampToValueAtTime(0.5, st + 0.02);
         g.gain.exponentialRampToValueAtTime(0.0001, st + 0.25);
-        o.connect(g).connect(audio.destination);
+        o.connect(g).connect(audioOut || audio.destination);
         o.start(st); o.stop(st + 0.27);
       }
     } catch (e) {}
@@ -718,7 +757,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
       if (changed) {
         warnedIdx = -1;
-        beep(3, 880); flash();
+        levelUpSound(); flash();
         toast(t.remain === 0 ? "마지막 레벨이 끝났어요" : lv(t.idx).brk ? "휴식 시간이에요" : `${levelName(t.idx)} · ${blindText(lv(t.idx))}`);
         if (t.idx > before) checkRebuy(before, t.idx);
         renderStruct(); save();
@@ -934,7 +973,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         if (eff.newDur !== eff.oldDur) setDuration(eff.newDur);
         if (eff.up) {
           setLevel(t.idx + 1);
-          beep(3, 880); flash();
+          levelUpSound(); flash();
           toast(`블라인드 업 · ${blindText(lv(t.idx))}`);
         } else {
           toast(`레벨 시간 ${fmt(eff.newDur)}분`);
@@ -1050,9 +1089,14 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
   $("addBrk").addEventListener("click", () => { struct.levels.push(B(10)); renderStruct(); renderTimer(); save(); });
   function renderSound() { $("soundBtn").textContent = struct.sound ? "알림 소리 켜짐" : "알림 소리 꺼짐"; }
+  $("soundTest").addEventListener("click", () => {
+    unlockAudio();
+    if (!struct.sound) { toast("알림 소리가 꺼져 있어요"); return; }
+    levelUpSound();
+  });
   $("soundBtn").addEventListener("click", () => {
     unlockAudio(); struct.sound = !struct.sound; renderSound(); save();
-    if (struct.sound) beep(1, 880);
+    if (struct.sound) levelUpSound();
   });
 
   /* ======================= score sheet ======================= */
