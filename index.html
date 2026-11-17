@@ -502,6 +502,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       <div class="struct-tools">
         <button class="btn-line" id="soundBtn" type="button">알림 소리 켜짐</button>
         <button class="btn-line" id="soundTest" type="button">블라인드 업 소리 듣기</button>
+        <button class="btn-line" id="bellTest" type="button">리바인 마감 소리 듣기</button>
         <button class="btn-line danger" id="structReset" type="button">기본 구조로</button>
       </div>
     </div>
@@ -689,6 +690,26 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       tone("square", 1568, t + 1.0, 0.45, 0.25);
     } catch (e) {}
   }
+  /* 리바인 마감: 복싱 종 땡! 땡! 땡! (배음이 어긋난 사인파 4개가 울리며 사라짐) */
+  function bellSound(delaySec) {
+    if (!struct.sound) return;
+    setTimeout(() => { try { navigator.vibrate && navigator.vibrate([300, 120, 300, 120, 600]); } catch (e) {} }, delaySec * 1000);
+    if (!audio) return;
+    try {
+      for (let k = 0; k < 3; k++) {
+        const s = audio.currentTime + delaySec + k * 0.42;
+        [[1, 0.45], [2.76, 0.28], [5.4, 0.16], [8.93, 0.1]].forEach(([m, v]) => {
+          const o = audio.createOscillator(), g = audio.createGain();
+          o.type = "sine"; o.frequency.value = 620 * m;
+          g.gain.setValueAtTime(0.0001, s);
+          g.gain.exponentialRampToValueAtTime(v, s + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, s + (k === 2 ? 1.5 : 0.9) / Math.sqrt(m));
+          o.connect(g).connect(audioOut || audio.destination);
+          o.start(s); o.stop(s + 1.6);
+        });
+      }
+    } catch (e) {}
+  }
   function beep(times, freq) {
     if (!struct.sound) return;
     try { navigator.vibrate && navigator.vibrate(times === 1 ? 200 : [250, 120, 250, 120, 250]); } catch (e) {}
@@ -737,7 +758,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function checkRebuy(oldIdx, newIdx) {
     const r = rebuyIdx();
     if (r >= 0 && oldIdx <= r && newIdx > r) {
-      beep(3, 660);
+      bellSound(1.6);      // 레벨업 소리(약 1.5초)가 끝난 뒤에 울림
       showNotice("리바인 마감", `<p class="big">${esc(blindText(lv(r)))} 레벨이 끝났어요.<br>지금부터 리바인할 수 없어요.</p>`);
     }
   }
@@ -1093,6 +1114,11 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     unlockAudio();
     if (!struct.sound) { toast("알림 소리가 꺼져 있어요"); return; }
     levelUpSound();
+  });
+  $("bellTest").addEventListener("click", () => {
+    unlockAudio();
+    if (!struct.sound) { toast("알림 소리가 꺼져 있어요"); return; }
+    bellSound(0);
   });
   $("soundBtn").addEventListener("click", () => {
     unlockAudio(); struct.sound = !struct.sound; renderSound(); save();
