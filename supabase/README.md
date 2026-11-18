@@ -19,4 +19,4 @@
 - `holdem_ttables`: 테이블 번호·이름·시작 딜러
 - `holdem_tplayers`: 참가자 (테이블, 자리, 리바인 횟수, 탈락 순서 `bust_seq`). 등수는 탈락 순서로 계산
 - `holdem_t_state(p_id)`: 전체 상태 + 서버 시각(폰마다 시계 차이 보정)
-- `holdem_t_create`, `holdem_t_do`: 딜러 비밀번호를 확인하고 변경
+- `holdem_t_create`, `holdem_t_do`: 딜러 비밀번호를 확인하고 변경. 타이머·세팅·삭제는 방장 키(만든 폰에만 저장, 서버에는 해시만)도 확인. 방장 아닌 폰은 탈락 처리에 딸린 자동 정지만 가능
