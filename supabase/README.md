@@ -12,3 +12,11 @@
 - `holdem_change_pin(p_old, p_new)`: 비밀번호 변경 (앱의 랭킹 화면 맨 아래)
 
 비밀번호를 8번 틀리면 10분 동안 잠깁니다.
+
+## 여러 테이블 토너먼트
+
+- `holdem_tourneys`: 토너먼트 (상태, 세팅, 공용 타이머 `clock`, 최근 동작 알림, `rev`)
+- `holdem_ttables`: 테이블 번호·이름·시작 딜러
+- `holdem_tplayers`: 참가자 (테이블, 자리, 리바인 횟수, 탈락 순서 `bust_seq`). 등수는 탈락 순서로 계산
+- `holdem_t_state(p_id)`: 전체 상태 + 서버 시각(폰마다 시계 차이 보정)
+- `holdem_t_create`, `holdem_t_do`: 딜러 비밀번호를 확인하고 변경

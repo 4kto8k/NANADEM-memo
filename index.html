@@ -316,7 +316,7 @@ details.struct[open] summary::after { content: "접기"; }
 .sheet .no { border: 1px solid var(--line); background: var(--well); }
 
 /* tabs + views */
-.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--rail); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--rail); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
 .tabs a {
   text-align: center; padding: 9px 6px; border-radius: 9px; font-weight: 700; font-size: 14px;
   color: var(--muted); text-decoration: none;
@@ -377,6 +377,80 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .sheet .ok:disabled { opacity: 0.5; }
 .res-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 14px; background: var(--well); border-radius: 10px; padding: 10px 12px; font-variant-numeric: tabular-nums; }
 
+/* 여러 테이블 */
+.tchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.tchip {
+  border: 1px solid var(--line); background: var(--rail); border-radius: 10px; padding: 8px 12px;
+  font-size: 14px; font-weight: 700; color: var(--chalk); display: grid; text-align: left; gap: 0;
+}
+.tchip small { font-size: 11px; color: var(--muted); font-weight: 500; }
+.tchip.on { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+.tchip.on small { color: var(--green-ink); }
+.tchip.ft { border-color: var(--gold); }
+.tchip.add { color: var(--muted); border-style: dashed; place-items: center; }
+.pick-hint { background: var(--gold-bg); color: var(--gold); border-radius: 10px; padding: 10px 12px; font-size: 14px; font-weight: 700; }
+.tv-status { font-size: 14px; color: var(--muted); display: grid; gap: 6px; }
+.tv-status b { color: var(--chalk); font-size: 16px; }
+.tv-status .hint { color: var(--gold); font-weight: 700; }
+.tv-last { font-size: 12px; color: var(--muted); }
+.tv-last:empty { display: none; }
+.net { color: var(--red); font-size: 13px; font-weight: 700; }
+.ft-box { background: var(--gold-bg); border: 1px solid var(--gold); border-radius: 14px; padding: 14px; display: grid; gap: 8px; }
+.ft-box b { color: var(--gold); font-size: 18px; }
+.ft-box span { font-size: 13px; color: var(--chalk); }
+.ft-box.on { background: var(--rail); grid-template-columns: 1fr auto; align-items: center; }
+.ft-box.on b { font-size: 15px; }
+.tpanel { background: var(--rail); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+.tpanel h3 { margin: 0; font-size: 16px; font-weight: 900; }
+.tpanel p { margin: 0; font-size: 13px; color: var(--muted); }
+.tpanel textarea {
+  width: 100%; min-height: 70px; background: var(--well); color: var(--chalk); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px; font: 16px/1.5 var(--font); resize: vertical;
+}
+.pool { display: flex; flex-wrap: wrap; gap: 6px; }
+.pchip { display: inline-flex; align-items: center; gap: 4px; background: var(--well); border: 1px solid var(--line); border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 14px; color: var(--chalk); }
+.pchip button { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0 4px; }
+.pchip.pick { padding: 6px 12px; }
+.tseat-head, .tseat { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 0 12px; }
+.tseat-head { background: var(--green); color: var(--green-ink); font-size: 12px; font-weight: 700; padding-block: 8px; }
+.tseat { padding-block: 10px; border-top: 1px solid var(--line); }
+.tseat .sn { display: grid; justify-items: center; font-size: 19px; font-weight: 900; line-height: 1.1; }
+.tseat .sn small { font-size: 10px; color: var(--gold); font-weight: 700; }
+.tseat .nm { font-size: 16px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.tseat.empty .nm { color: var(--faint); font-weight: 500; }
+.tseat.dealer { background: var(--gold-bg); }
+.tseat .acts { display: flex; gap: 5px; }
+.mini-btn { border: 1px solid var(--line); background: var(--well); color: var(--chalk); border-radius: 9px; padding: 7px 9px; font-size: 13px; font-weight: 700; }
+.mini-btn.bust { color: var(--red); border-color: #6b3532; }
+.rbc { font-style: normal; font-size: 11px; font-weight: 900; color: #2b0c0a; background: var(--red); border-radius: 999px; padding: 1px 6px; vertical-align: 2px; }
+.blist { display: grid; gap: 0; background: var(--rail); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.brow { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 15px; }
+.brow:first-child { border-top: 0; }
+.brow .r { color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.done-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 16px; }
+.done-list li:first-child { color: var(--gold); font-size: 20px; }
+.form2 { display: grid; gap: 10px; }
+.form2 label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.form2 input, .form2 select {
+  width: 100%; background: var(--well); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+  font-size: 16px; color: var(--chalk); font-family: var(--font);
+}
+.rb-step { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+.rb-step button { width: 44px; height: 40px; border: 1px solid var(--line); background: var(--well); color: var(--chalk); border-radius: 10px; font-size: 20px; font-weight: 900; }
+.rb-step b { font-size: 22px; color: var(--chalk); min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.danger-text { color: var(--red) !important; justify-self: start; }
+.seat-res { display: grid; gap: 4px; }
+.seat-res ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 16px; }
+.seat-res li span { display: inline-block; width: 44px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.seat-res small { color: var(--gold); font-size: 11px; }
+.tset { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tset label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.tset input { background: var(--well); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 16px; color: var(--chalk); text-align: center; }
+.lock-note { color: var(--gold) !important; font-weight: 700; }
+.lv-no:not(button) { display: grid; place-items: center; }
+.num { cursor: pointer; }
+.num .rbc { margin-top: 2px; }
+
 @media (prefers-reduced-motion: reduce) {
   .toast, .mini { transition: none; }
   .timer.flash { animation: none; }
@@ -404,6 +478,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   <nav class="tabs" aria-label="화면 선택">
     <a href="#" id="tabSheet" class="on">오늘 기록표</a>
     <a href="#ranking" id="tabRank">이번 달 랭킹</a>
+    <a href="#tourney" id="tabTourney">여러 테이블</a>
   </nav>
 
   <div class="view" id="viewSheet">
@@ -530,6 +605,88 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <div id="gameList" class="games"></div>
     <button class="btn-text" id="pinChange" type="button">딜러 비밀번호 바꾸기</button>
   </div>
+<div class="view" id="viewTourney" hidden>
+  <div id="tvLobby" class="view">
+    <div class="tpanel">
+      <h3>여러 테이블 토너먼트</h3>
+      <p>블라인드 타이머 하나를 모든 테이블이 같이 쓰고, 플레이어는 테이블마다 따로 관리해요. 전체 등수만 나오고 월간 랭킹에는 들어가지 않아요.</p>
+      <button class="btn-save" type="button" id="tvCreate">새 토너먼트 만들기</button>
+    </div>
+    <h3 class="sub">오늘 만든 토너먼트</h3>
+    <div id="tvList" class="games"></div>
+  </div>
+  <div id="tvMain" class="view" hidden>
+    <div class="tchips" id="tvTables"></div>
+    <div class="pick-hint" id="tvPickHint">내 테이블을 골라 주세요. 다른 폰 테이블도 골라서 이어서 진행할 수 있어요.</div>
+    <div class="tv-status" id="tvStatus"></div>
+    <span class="net" id="tvNet" hidden>인터넷 연결이 끊겼어요. 타이머는 계속 가고, 연결되면 맞춰져요.</span>
+    <div class="tv-last" id="tvLast"></div>
+
+    <section class="timer" id="ttimer" aria-label="공용 블라인드 타이머">
+      <div class="t-top">
+        <span class="lv-chip" id="tt-lv">레벨 1</span>
+        <span class="t-next" id="tt-next"></span>
+      </div>
+      <div class="blinds">
+        <span class="k" id="tt-bk">스몰 / 빅 블라인드</span>
+        <span class="v" id="tt-bl">100 / 200</span>
+      </div>
+      <div class="count paused" id="tt-ct" role="timer" aria-live="off" title="눌러서 남은 시간 바꾸기">10:00</div>
+      <div class="t-adj" id="tt-adj" aria-label="남은 시간 조절">
+        <button type="button" data-adj="-60000">−1분</button>
+        <button type="button" data-adj="-10000">−10초</button>
+        <button type="button" class="edit" id="tt-set">직접</button>
+        <button type="button" data-adj="10000">+10초</button>
+        <button type="button" data-adj="60000">+1분</button>
+      </div>
+      <div class="bar"><i id="tt-bar"></i></div>
+      <div class="t-info">
+        <span class="pill" id="tt-dur">레벨 시간 <b>10분</b></span>
+        <span class="pill" id="tt-rb" hidden></span>
+      </div>
+      <div class="t-ctrl">
+        <button class="btn-side" id="tt-prev" type="button">◀ 이전</button>
+        <button class="btn-main" id="tt-main" type="button">토너먼트 시작</button>
+        <button class="btn-side" id="tt-nextbtn" type="button">다음 ▶</button>
+      </div>
+    </section>
+
+    <div id="tvFt"></div>
+
+    <div class="tpanel" id="tvSetup" hidden>
+      <h3>참가자 등록</h3>
+      <p>이름을 쉼표나 줄바꿈으로 여러 명 한 번에 넣을 수 있어요.</p>
+      <textarea id="tvNames" placeholder="김철수, 이영희, 박민수"></textarea>
+      <button class="btn-line" type="button" id="tvAddNames">등록</button>
+      <p id="tvRegCount"></p>
+      <div class="pool" id="tvPool"></div>
+      <button class="btn-save" type="button" id="tvDraw">시작 자리 뽑기</button>
+      <p>모든 참가자를 테이블에 고르게 나눠 랜덤으로 앉혀요. 테이블마다 딜러로 정한 사람은 4번 자리에 고정돼요. 딜러는 아래 '내 테이블 정보'에서 정해요.</p>
+    </div>
+
+    <section class="board" id="tvSeats" aria-label="내 테이블 자리"></section>
+    <button class="btn-text" type="button" id="tvEditTable">내 테이블 정보 (이름 · 딜러)</button>
+
+    <div id="tvBusted"></div>
+
+    <div class="tpanel" id="tvDone" hidden>
+      <h3>최종 순위</h3>
+      <ol class="done-list" id="tvDoneList"></ol>
+      <button class="btn-save" type="button" id="tvCopy">결과 복사</button>
+      <textarea id="tvCopyText" hidden readonly></textarea>
+    </div>
+
+    <details class="struct" id="tvSettings">
+      <summary>토너 세팅</summary>
+      <div class="struct-body" id="tvSetBody"></div>
+    </details>
+
+    <div class="foot">
+      <button class="btn-line" type="button" id="tvLeave">다른 토너먼트 보기</button>
+      <button class="btn-line danger" type="button" id="tvDelete">토너먼트 지우기</button>
+    </div>
+  </div>
+</div>
 </div>
 <div class="modal" id="pinModal" hidden>
   <form class="sheet" id="pinForm" role="dialog" aria-modal="true" aria-labelledby="pTitle">
@@ -579,7 +736,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const blankState = () => ({
     date: todayStr(), day: null, table: "", start: null, end: null, timer: blankTimer(),
     savedId: null, savedAt: null, savedSig: null,
-    seats: Array.from({ length: SEATS }, () => ({ name: "", rank: "", mission: "", draw: "" }))
+    seats: Array.from({ length: SEATS }, () => ({ name: "", rank: "", mission: "", draw: "", rebuys: 0 }))
   });
   const L = (sb, bb, extra) => Object.assign({ sb, bb }, extra || {});
   const B = (min = 10) => ({ brk: true, min });
@@ -853,7 +1010,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
   let timerVisible = true;
   function updateMini() {
-    const show = !timerVisible && !!state.start && !state.end;
+    const show = !timerVisible && !!state.start && !state.end && location.hash !== "#tourney";
     $("mini").classList.toggle("show", show);
     $("mini").setAttribute("aria-hidden", show ? "false" : "true");
     $("m-btn").tabIndex = show ? 0 : -1;
@@ -965,7 +1122,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   /* ---------- 탈락 등수 입력 → 블라인드 업 / 레벨 시간 단축 ---------- */
   function outEffect(rank) {
     const t = T();
-    if (!state.start || state.end || t.applied[rank]) return null;
+    if (!state.start || state.end || t.applied[rank] || rank === 1) return null;   // 1등은 탈락이 아님
     const target = rank >= 1 && rank <= SEATS ? outMinFor(rank) : 0;
     const newDur = target > 0 ? Math.min(n0(t.dur), target) : n0(t.dur);
     const up = rank === BLINDUP_RANK && t.idx < last();
@@ -1008,7 +1165,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
   /* ---------- dialog ---------- */
   let modalCb = null;
-  function openModal({ title, body, ok, no, onOk, onNo, alert, returnFocus }) {
+  function openModal({ title, body, ok, no, onOk, onNo, alert, returnFocus, noAction }) {
     if (!$("modal").hidden) return;
     $("mTitle").innerHTML = title;
     $("mTitle").className = alert ? "alert" : "";
@@ -1016,10 +1173,11 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("mOk").textContent = ok || "확인";
     $("mNo").hidden = !no; if (no) $("mNo").textContent = no;
     $("mActs").classList.toggle("one", !no);
-    modalCb = { onOk, onNo, returnFocus };
+    modalCb = { onOk, onNo, returnFocus, noAction };
     $("modal").hidden = false;
     $("mOk").focus();
   }
+  function dismissModal() { modalCb = null; $("modal").hidden = true; }
   function closeModal(okPressed) {
     const cb = modalCb; modalCb = null;
     $("modal").hidden = true;
@@ -1034,7 +1192,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   }
   $("mOk").addEventListener("click", () => closeModal(true));
   $("mNo").addEventListener("click", () => closeModal(false));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("modal").hidden) closeModal(false); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || $("modal").hidden) return;
+    if (modalCb && modalCb.noAction) dismissModal(); else closeModal(false);   // '아니오'가 동작인 창은 Esc로 그냥 닫기
+  });
 
   /* wake lock while the game runs */
   let wakeLock = null;
@@ -1146,7 +1307,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const row = document.createElement("div");
       row.className = "seat cols" + (no === DEALER_SEAT ? " dealer" : "");
       row.innerHTML = `
-        <div class="num">${no}${no === DEALER_SEAT ? "<small>딜러</small>" : ""}</div>
+        <div class="num" title="눌러서 리바인 횟수 고치기">${no}${no === DEALER_SEAT ? "<small>딜러</small>" : ""}<em class="rbc" hidden></em></div>
         <input class="in-name" id="n${i}" placeholder="이름" list="players" autocomplete="off" aria-label="${no}번 이름">
         <input class="in-rank" id="r${i}" placeholder="등수" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="${no}번 등수">
         <input class="in-mission" id="m${i}" placeholder="미션번호" autocomplete="off" aria-label="${no}번 미션번호">
@@ -1157,22 +1318,52 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const el = {
         name: row.querySelector("#n" + i), rank: row.querySelector("#r" + i),
         mission: row.querySelector("#m" + i), draw: row.querySelector("#d" + i),
-        total: row.querySelector(".total b"), warn: row.querySelector(".warn")
+        total: row.querySelector(".total b"), warn: row.querySelector(".warn"), rb: row.querySelector(".num .rbc")
       };
+      row.querySelector(".num").addEventListener("click", () => editRebuys(i));
       ["name", "rank", "mission", "draw"].forEach((k) => {
         el[k].value = state.seats[i][k];
         el[k].addEventListener("input", () => {
           if (k === "rank") el.rank.value = el.rank.value.replace(/[^0-9]/g, "");
           state.seats[i][k] = el[k].value;
           refresh(); saveSoon();
-          if (k === "rank") {
-            const eff = outEffect(parseInt(el.rank.value, 10));
-            if (eff) { el.rank.blur(); askOut(eff, no, el.rank); }
+          if (k === "rank" && el.rank.value) {
+            const rk = parseInt(el.rank.value, 10);
+            const goOut = () => { const eff = outEffect(rk); if (eff) { el.rank.blur(); askOut(eff, no, el.rank); } };
+            if (rebuyOpenLocal() && rk >= 2 && rk <= SEATS) { /* 1등은 탈락이 아니라 리바인을 묻지 않음 */ el.rank.blur(); askRebuy(i, rk, goOut); } else goOut();
           }
         });
       });
       seatEls.push(el);
     }
+  }
+
+  /* ---------- 리바인 (일반 기록표) ---------- */
+  const rebuyOpenLocal = () => !!state.start && !state.end && rebuyIdx() >= 0 && T().idx <= rebuyIdx();
+  function askRebuy(i, rk, goOut) {
+    const s = state.seats[i], name = s.name.trim() || `${i + 1}번 자리`, n = (s.rebuys || 0) + 1;
+    openModal({
+      title: `${esc(name)} 탈락?`,
+      body: `<p class="big">아직 리바인 기간이에요.</p><p>${esc(blindText(lv(rebuyIdx())))} 레벨까지 리바인할 수 있어요. 리바인하면 등수를 지우고 리바인 횟수를 올려요.</p>`,
+      ok: `리바인 (${n}회째)`, no: `${rk}등 탈락 확정`, noAction: true,
+      onOk: () => {
+        s.rebuys = n; s.rank = ""; seatEls[i].rank.value = "";
+        refresh(); save(); toast(`${name} 리바인 ${n}회`);
+      },
+      onNo: goOut
+    });
+  }
+  function editRebuys(i) {
+    const s = state.seats[i], name = s.name.trim() || `${i + 1}번 자리`;
+    let n = s.rebuys || 0;
+    openModal({
+      title: `${esc(name)} 리바인`,
+      body: `<div class="rb-step"><span>리바인 횟수</span><button type="button" id="rbMinus">−</button><b id="rbVal">${n}</b><button type="button" id="rbPlus">+</button></div>`,
+      ok: "확인", no: "취소",
+      onOk: () => { s.rebuys = n; refresh(); save(); }
+    });
+    $("rbMinus").addEventListener("click", () => { n = Math.max(0, n - 1); $("rbVal").textContent = n; });
+    $("rbPlus").addEventListener("click", () => { n++; $("rbVal").textContent = n; });
   }
 
   function refresh() {
@@ -1195,6 +1386,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       el.draw.classList.toggle("bad", badDraw);
       if (badDraw) msgs.push("뽑기점수에 숫자가 없어요");
       el.warn.textContent = msgs.join(" · ");
+      const rb = s.rebuys || 0;
+      el.rb.hidden = !rb; el.rb.textContent = "R" + rb;
     });
     renderCloud();
   }
@@ -1375,7 +1568,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       .filter((p) => p.t !== null)
       .map((p) => ({
         seat: p.i + 1, player: normName(p.s.name), rank: parseInt(p.s.rank, 10) || null,
-        mission: p.s.mission.trim(), draw: drawPoints(p.s.draw), total: Math.round(p.t * 10) / 10
+        mission: p.s.mission.trim(), draw: drawPoints(p.s.draw), total: Math.round(p.t * 10) / 10, rebuys: p.s.rebuys || 0
       }));
     return {
       played_on: isoDay(state.start || state.day || Date.now()),
@@ -1461,7 +1654,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const want = monthLabel();
     let games;
     try {
-      games = await sb(`holdem_games?select=id,played_on,table_name,created_at,holdem_results(seat,player,rank,mission,total)` +
+      games = await sb(`holdem_games?select=id,played_on,table_name,created_at,holdem_results(seat,player,rank,mission,total,rebuys)` +
         `&played_on=gte.${from}&played_on=lt.${to}&order=played_on.desc,created_at.desc`);
     } catch (e) {
       if (want !== monthLabel()) return;
@@ -1495,7 +1688,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const rs = [...g.holdem_results].sort((a, b) => (a.rank || 99) - (b.rank || 99) || (a.seat || 0) - (b.seat || 0));
       return `<div class="game">
         <div class="game-top"><b>${dayLabel(g.played_on)}${g.table_name ? " · " + esc(g.table_name) : ""}</b><span>${rs.length}명</span></div>
-        <ol>${rs.map((r) => `<li><span class="r">${r.rank ? r.rank + "등" : "–"}</span><span>${esc(r.player)}${r.mission ? ` <span class="r">미션 ${esc(r.mission)}</span>` : ""}</span><span class="t">${fmt(Number(r.total))}점</span></li>`).join("")}</ol>
+        <ol>${rs.map((r) => `<li><span class="r">${r.rank ? r.rank + "등" : "–"}</span><span>${esc(r.player)}${r.rebuys ? ` <em class="rbc">R${r.rebuys}</em>` : ""}${r.mission ? ` <span class="r">미션 ${esc(r.mission)}</span>` : ""}</span><span class="t">${fmt(Number(r.total))}점</span></li>`).join("")}</ol>
         <button class="del" type="button" data-del-game="${g.id}">이 게임 기록 지우기</button>
       </div>`;
     }).join("") || `<div class="empty-note">저장된 게임이 없어요.</div>`;
@@ -1529,13 +1722,663 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
 
   /* ---------- 화면 전환 (#ranking) ---------- */
+  /* ======================= 여러 테이블 토너먼트 (#tourney) =======================
+     블라인드 타이머는 서버(holdem_tourneys.clock) 하나를 모든 폰이 같이 봄. 2초마다 새로 읽고,
+     레벨 진행은 각 폰이 같은 규칙으로 계산(서버 시각 기준). 등수는 탈락 순서로 계산. 랭킹에는 안 들어감. */
+  const TV_KEY = "holdem-tv-v1";
+  let tv = (() => { try { return JSON.parse(localStorage.getItem(TV_KEY)) || {}; } catch (e) { return {}; } })();
+  const tvSaveLocal = () => { try { localStorage.setItem(TV_KEY, JSON.stringify(tv)); } catch (e) {} };
+  let tvData = null, tvOffset = 0, tvBusy = false, tvMyAt = 0, tvSeenAt = null, tvPrevIdx = null, tvPrevStatus = null,
+      tvWarned = -1, tvDraft = null, tvDraftRev = -1, tvDraftDirty = false, tvOnline = true, tvPrevId = null;
+  const tvNow = () => Date.now() + tvOffset;
+  const tvActive = () => location.hash === "#tourney";
+  const tvS = () => tvData.tourney.settings;
+  const tvT = () => tvData.tourney;
+  const tvLen = (S, c, i) => (S.levels[i].brk ? Math.max(0.1, n0(S.levels[i].min)) : Math.max(0.1, n0(c.dur))) * 60000;
+  function tvNorm(S, C, now) {
+    const c = Object.assign({}, C), lastI = S.levels.length - 1;
+    if (c.idx > lastI) c.idx = lastI;
+    if (c.running) {
+      if (!c.levelLen) c.levelLen = tvLen(S, c, c.idx);
+      while (c.endsAt <= now && c.idx < lastI) { c.idx++; c.levelLen = tvLen(S, c, c.idx); c.endsAt += c.levelLen; }
+      if (c.endsAt <= now) { c.running = false; c.endsAt = null; c.remain = 0; }
+    }
+    return c;
+  }
+  const tvCurLen = (S, c) => c.levelLen || tvLen(S, c, c.idx);
+  const tvRem = (S, c, now) => c.running ? c.endsAt - now : (c.remain == null ? tvCurLen(S, c) : c.remain);
+  const tvLevelNo = (S, i) => S.levels.slice(0, i + 1).filter((x) => !x.brk).length;
+  const tvLevelName = (S, i) => S.levels[i].brk ? "휴식" : `레벨 ${tvLevelNo(S, i)}`;
+  const tvRebuyIdx = (S) => S.levels.findIndex((x) => x.rebuy && !x.brk);
+  const tvEff = () => tvNorm(tvS(), tvT().clock, tvNow());
+  function tvStart(c, S, now) { c = Object.assign({}, c); if (c.running) return c; const r = tvRem(S, c, now); c.levelLen = tvCurLen(S, c); c.endsAt = now + r; c.running = true; c.remain = null; return c; }
+  function tvPause(c, now) { c = Object.assign({}, c); if (!c.running) return c; c.remain = Math.max(0, c.endsAt - now); c.running = false; c.endsAt = null; return c; }
+  function tvGoto(c, S, i, now) { c = Object.assign({}, c); c.idx = Math.max(0, Math.min(S.levels.length - 1, i)); c.levelLen = tvLen(S, c, c.idx); if (c.running) c.endsAt = now + c.levelLen; else c.remain = null; return c; }
+  function tvSetRem(c, S, ms, now) { c = Object.assign({}, c); ms = Math.max(1000, Math.round(ms / 1000) * 1000); c.levelLen = Math.max(tvCurLen(S, c), ms); if (c.running) c.endsAt = now + ms; else c.remain = ms; return c; }
+  const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  /* ---------- 사람·테이블 ---------- */
+  const tvPlayers = () => tvData.players;
+  const tvAlive = () => tvPlayers().filter((p) => p.bust_seq == null);
+  const tvBusted = () => tvPlayers().filter((p) => p.bust_seq != null).sort((a, b) => a.bust_seq - b.bust_seq);
+  const tvFinal = () => tvT().status === "final" || tvT().status === "done";
+  function tvRankOf(p) {
+    const alive = tvAlive();
+    if (p.bust_seq == null) return alive.length === 1 ? 1 : null;
+    return tvPlayers().length - tvBusted().findIndex((x) => x.id === p.id);
+  }
+  const tvAt = (no, seat) => tvAlive().find((p) => p.table_no === no && p.seat === seat);
+  function tvTableLabel(no, short) {
+    if (no == null) return "";
+    const t = tvData.tables.find((x) => x.no === no) || { name: "" };
+    if (tvFinal() && tvT().ft_table === no) return "파이널 테이블";
+    const d = !tvFinal() ? tvAt(no, DEALER_SEAT) : null;
+    const nm = t.name || (d ? d.name : "");
+    return `${no}번 테이블` + (nm ? (short ? ` ${nm}` : `(${nm})`) : "");
+  }
+  const tvWho = () => tv.table ? tvTableLabel(tv.table) : "딜러";
+  const tvSeatsOf = () => Math.max(2, n0(tvS().seats) || 8);
+  function tvEmptySeats(no) {
+    const out = [];
+    for (let s = 1; s <= tvSeatsOf(); s++) if (!tvAt(no, s)) out.push(s);
+    return out;
+  }
+  const tvTablesInUse = (exceptId) => [...new Set(tvAlive().filter((p) => p.id !== exceptId && p.table_no != null).map((p) => p.table_no))];
+
+  /* ---------- 서버 ---------- */
+  async function tvFetch() {
+    if (!tv.id) return;
+    const t0 = Date.now();
+    let r;
+    try { r = await sb("rpc/holdem_t_state", { p_id: tv.id }); } catch (e) { tvSetOnline(false); return; }
+    const t1 = Date.now();
+    tvSetOnline(true);
+    tvOffset = r.now - (t0 + t1) / 2;
+    if (!r.tourney) { toast("토너먼트가 삭제됐어요"); tv = {}; tvSaveLocal(); tvData = null; renderTV(); return; }
+    const changed = !tvData || tvData.tourney.id !== r.tourney.id || r.tourney.rev !== tvData.tourney.rev;
+    tvData = r;
+    if (changed) tvOnChange();
+  }
+  function tvSetOnline(ok) {
+    if (ok === tvOnline) return;
+    tvOnline = ok;
+    const el = $("tvNet"); if (el) el.hidden = ok;
+  }
+  /* 여러 동작을 비밀번호 한 번으로. 마지막 동작에 label(알림 문구)을 붙임 */
+  async function tvActMany(steps, label) {
+    if (tvBusy) { toast("앞의 동작을 처리하는 중이에요. 잠시 후 다시 눌러 주세요"); return null; }
+    tvBusy = true;
+    try {
+      const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 모든 테이블에 반영돼요.", async (pin) => {
+        let r = { ok: true };
+        for (let k = 0; k < steps.length; k++) {
+          const a = Object.assign({}, steps[k][1] || {});
+          if (label && k === steps.length - 1) a.label = label;
+          r = await sb("rpc/holdem_t_do", { p_pin: pin, p_id: tv.id, p_action: steps[k][0], p_args: a, p_who: tvWho() });
+          if (!r.ok) return r;
+        }
+        return r;
+      });
+      if (res) { tvMyAt = Date.now(); await tvFetch(); }
+      return res;
+    } finally { tvBusy = false; }
+  }
+  const tvAct = (action, args, label) => tvActMany([[action, args]], label);
+
+  function tvOnChange() {
+    const t = tvT();
+    if (tvSeenAt !== null && t.last_action_at && t.last_action_at !== tvSeenAt && Date.now() - tvMyAt > 4000 && tvActive()) toast(t.last_action);
+    tvSeenAt = t.last_action_at || "";
+    if (tvPrevStatus && tvPrevStatus !== t.status) {
+      if (t.status === "final" && Date.now() - tvMyAt > 4000) tvShowFt();
+      if (t.status === "done") tvShowWinner();
+    }
+    tvPrevStatus = t.status;
+    if (t.clock.running && tvActive()) keepAwake(true);
+    renderTV();
+  }
+
+  /* ---------- 타이머 ---------- */
+  function tvTick() {
+    if (!tvData || !tvActive()) return;
+    const S = tvS(), c = tvEff(), now = tvNow();
+    if (tvPrevIdx != null && c.idx !== tvPrevIdx && tvData.tourney.id === tvPrevId) {
+      if (c.idx > tvPrevIdx) {
+        levelUpSound(); tvFlash();
+        const r = tvRebuyIdx(S);
+        if (r >= 0 && tvPrevIdx <= r && c.idx > r) {
+          bellSound(1.6);
+          showNotice("리바인 마감", `<p class="big">${esc(blindText(S.levels[r]))} 레벨이 끝났어요.<br>지금부터 리바인할 수 없어요.</p>`);
+        }
+      }
+      tvWarned = -1;
+    }
+    tvPrevIdx = c.idx; tvPrevId = tvData.tourney.id;
+    const rem = tvRem(S, c, now);
+    if (c.running && rem <= 60000 && rem > 55000 && tvWarned !== c.idx && tvCurLen(S, c) > 120000) {
+      tvWarned = c.idx; beep(1, 660);
+      if (c.idx === tvRebuyIdx(S)) toast("1분 뒤 리바인 마감");
+    }
+    tvRenderTimer(c, rem);
+  }
+  function tvFlash() { const el = $("ttimer"); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+  function tvRenderTimer(c, rem) {
+    const S = tvS(), t = tvT(), cur = S.levels[c.idx], next = S.levels[c.idx + 1];
+    $("tt-lv").textContent = tvLevelName(S, c.idx); $("tt-lv").classList.toggle("brk", !!cur.brk);
+    $("tt-bk").textContent = cur.brk ? "쉬는 시간" : "스몰 / 빅 블라인드";
+    $("tt-bl").textContent = blindText(cur);
+    $("tt-next").innerHTML = next ? `다음 <b>${blindText(next)}</b>` : "마지막 레벨";
+    const ct = $("tt-ct");
+    ct.textContent = clock(rem);
+    ct.classList.toggle("paused", !c.running);
+    ct.classList.toggle("warn", c.running && rem <= 60000);
+    $("tt-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / tvCurLen(S, c)) * 100)) + "%";
+    $("tt-dur").innerHTML = `레벨 시간 <b>${fmt(n0(c.dur))}분</b>`;
+    const r = tvRebuyIdx(S), rb = $("tt-rb");
+    rb.hidden = r < 0;
+    if (r >= 0) {
+      rb.className = "pill " + (c.idx < r ? "rb-open" : c.idx === r ? "rb-last" : "rb-closed");
+      rb.textContent = c.idx < r ? `리바인 가능 · ${blindText(S.levels[r])}까지` : c.idx === r ? "이번 레벨 끝나면 리바인 마감" : "리바인 마감";
+    }
+    const done = t.status === "done";
+    $("tt-prev").disabled = done || c.idx === 0;
+    $("tt-nextbtn").disabled = done || c.idx >= S.levels.length - 1;
+    const m = $("tt-main");
+    m.disabled = done;
+    m.classList.toggle("paused", !done && t.status !== "setup" && !c.running);
+    m.textContent = done ? "토너먼트 끝" : t.status === "setup" && !c.running ? "토너먼트 시작" : c.running ? "일시정지" : "재개";
+  }
+  function tvClockAct(fn, label) {
+    if (!tvData || tvBusy) return;
+    unlockAudio();
+    const S = tvS(), now = tvNow(), c = fn(tvEff(), S, now);
+    const args = { clock: c };
+    if (tvT().status === "setup" && c.running) args.status = "running";
+    tvAct("clock", args, label);
+  }
+  $("tt-main").addEventListener("click", () => {
+    if (!tvData) return;
+    const c = tvEff(), t = tvT();
+    if (t.status === "done") return;
+    if (c.running) tvClockAct((x, S, now) => tvPause(x, now), "일시정지");
+    else tvClockAct((x, S, now) => tvStart(x, S, now), t.status === "setup" ? "토너먼트 시작" : "재개");
+  });
+  $("tt-prev").addEventListener("click", () => tvClockAct((x, S, now) => tvGoto(x, S, x.idx - 1, now), "이전 레벨로"));
+  $("tt-nextbtn").addEventListener("click", () => tvClockAct((x, S, now) => tvGoto(x, S, x.idx + 1, now), "다음 레벨로"));
+  $("tt-adj").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-adj]"); if (!b) return;
+    const d = Number(b.dataset.adj);
+    tvClockAct((x, S, now) => tvSetRem(x, S, tvRem(S, x, now) + d, now), `남은 시간 ${d > 0 ? "+" : "−"}${Math.abs(d) >= 60000 ? Math.abs(d) / 60000 + "분" : Math.abs(d) / 1000 + "초"}`);
+  });
+  function tvEditRem() {
+    if (!tvData) return;
+    const S = tvS(), c = tvEff(), rem = Math.max(0, Math.ceil(tvRem(S, c, tvNow()) / 1000));
+    openModal({
+      title: "남은 시간 바꾸기 (모든 테이블)",
+      body: `<div class="time-in"><input id="setMin" inputmode="numeric" maxlength="3" value="${Math.floor(rem / 60)}" aria-label="분"> 분
+             <input id="setSec" inputmode="numeric" maxlength="2" value="${rem % 60}" aria-label="초"> 초</div>`,
+      ok: "바꾸기", no: "취소",
+      onOk: () => {
+        const ms = ((parseInt($("setMin").value, 10) || 0) * 60 + Math.min(59, parseInt($("setSec").value, 10) || 0)) * 1000;
+        if (ms <= 0) { toast("1초 이상으로 적어 주세요"); return; }
+        tvClockAct((x, S2, now) => tvSetRem(x, S2, ms, now), `남은 시간 ${clock(ms)}로 변경`);
+      }
+    });
+    const f = $("setMin"); f.focus(); f.select();
+  }
+  $("tt-set").addEventListener("click", tvEditRem);
+  $("tt-ct").addEventListener("click", tvEditRem);
+
+  /* ---------- 화면 그리기 ---------- */
+  function renderTV() {
+    $("tvLobby").hidden = !!tv.id;
+    $("tvMain").hidden = !tv.id;
+    if (!tv.id) { tvLoadLobby(); return; }
+    if (!tvData) { $("tvStatus").textContent = "불러오는 중…"; return; }
+    const t = tvT(), S = tvS(), alive = tvAlive();
+    if (tv.table && !tvData.tables.some((x) => x.no === tv.table)) { tv.table = null; tvSaveLocal(); }
+
+    /* 테이블 고르기 */
+    const tables = tvData.tables;
+    $("tvTables").innerHTML = tables.map((x) => {
+      const n = alive.filter((p) => p.table_no === x.no).length;
+      return `<button type="button" class="tchip${tv.table === x.no ? " on" : ""}${tvFinal() && t.ft_table === x.no ? " ft" : ""}" data-pick="${x.no}">${esc(tvTableLabel(x.no, true))}<small>${n}명</small></button>`;
+    }).join("") + (t.status !== "done" ? `<button type="button" class="tchip add" id="tvAddTable">+ 테이블</button>` : "");
+    $("tvPickHint").hidden = !!tv.table;
+
+    /* 전체 현황 + 밸런싱 추천 */
+    const counts = tables.map((x) => ({ no: x.no, n: alive.filter((p) => p.table_no === x.no).length })).filter((x) => x.n > 0);
+    let line = `남은 인원 <b>${alive.length}</b> / ${tvPlayers().length}명`;
+    if (counts.length > 1) line += " · " + counts.map((x) => `${x.no}번 ${x.n}명`).join(" · ");
+    const rbTotal = tvPlayers().reduce((a, p) => a + (p.rebuys || 0), 0);
+    if (rbTotal) line += ` · 리바인 ${rbTotal}회`;
+    let hint = "";
+    if (!tvFinal() && t.status !== "setup" && counts.length > 1) {
+      const mx = counts.reduce((a, b) => (b.n > a.n ? b : a)), mn = counts.reduce((a, b) => (b.n < a.n ? b : a));
+      if (mx.n - mn.n >= 2) hint = `<div class="hint">${mx.no}번 테이블 → ${mn.no}번 테이블로 1명 이동을 추천해요 (${mx.n}명 : ${mn.n}명)</div>`;
+    }
+    $("tvStatus").innerHTML = `<div>${line}</div>${hint}`;
+    $("tvLast").textContent = t.last_action ? `최근: ${t.last_action}${t.last_action_at ? " · " + hhmm(new Date(t.last_action_at).getTime()) : ""}` : "";
+
+    /* 파이널 테이블 */
+    const ftReady = !tvFinal() && t.status !== "setup" && alive.length > 1 && alive.length <= n0(S.ftSize) && tvTablesInUse().length > 1;
+    $("tvFt").innerHTML = ftReady
+      ? `<div class="ft-box"><b>${alive.length}명 남았어요. 파이널 테이블!</b><span>타이머는 멈춰 있어요. 자리를 뽑은 뒤 재개하세요.</span><button class="btn-save" type="button" id="tvFtBtn">파이널 테이블 자리 뽑기</button></div>`
+      : tvFinal() && t.status !== "done" ? `<div class="ft-box on"><b>파이널 테이블 진행 중</b><button class="btn-line" type="button" id="tvFtShow">자리 다시 보기</button></div>` : "";
+
+    /* 시작 전: 참가자 등록과 시작 자리 뽑기 */
+    $("tvSetup").hidden = t.status !== "setup";
+    if (t.status === "setup") {
+      const pool = alive.filter((p) => p.table_no == null);
+      $("tvPool").innerHTML = pool.length
+        ? pool.map((p) => `<span class="pchip">${esc(p.name)}<button type="button" data-pdel="${p.id}" aria-label="${esc(p.name)} 지우기">×</button></span>`).join("")
+        : `<span class="saved">자리 없는 참가자가 없어요.</span>`;
+      $("tvRegCount").textContent = `등록 ${alive.length}명 · 테이블 ${tables.length}개 · 테이블당 ${tvSeatsOf()}자리`;
+    }
+
+    /* 내 테이블 자리 */
+    tvRenderSeats();
+
+    /* 탈락 순서 */
+    const busted = tvBusted().slice().reverse();
+    $("tvBusted").innerHTML = busted.length ? `<h3 class="sub">탈락 순서</h3><div class="blist">${busted.map((p) =>
+      `<div class="brow"><span class="r">${tvRankOf(p)}등</span><span class="nm">${esc(p.name)}${p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : ""}</span><button type="button" class="mini-btn" data-unbust="${p.id}">되돌리기</button></div>`).join("")}</div>` : "";
+
+    /* 끝: 최종 순위 */
+    $("tvDone").hidden = t.status !== "done";
+    if (t.status === "done") $("tvDoneList").innerHTML = tvStandings().map((x) => `<li><b>${x.rank}등</b> ${esc(x.p.name)}${x.p.rebuys ? ` <em class="rbc">R${x.p.rebuys}</em>` : ""}</li>`).join("");
+
+    tvRenderSettings();
+    if (tvData) tvTick();
+  }
+  function tvStandings() {
+    const alive = tvAlive();
+    return alive.map((p) => ({ p, rank: alive.length === 1 ? 1 : null })).concat(tvBusted().map((p) => ({ p, rank: tvRankOf(p) })))
+      .sort((a, b) => (a.rank || 0) - (b.rank || 0));
+  }
+  function tvRenderSeats() {
+    const box = $("tvSeats");
+    if (!tv.table) { box.innerHTML = ""; return; }
+    const t = tvT(), no = tv.table;
+    if (tvFinal() && t.ft_table !== no) {
+      box.innerHTML = `<div class="empty-note">파이널 테이블은 ${t.ft_table}번 테이블에서 진행해요.<br><button type="button" class="btn-line" data-pick="${t.ft_table}">파이널 테이블 보기</button></div>`;
+      return;
+    }
+    const used = tvAlive().filter((p) => p.table_no === no).map((p) => p.seat || 0);
+    const maxSeat = Math.max(tvSeatsOf(), ...used, 0);
+    let html = `<div class="tseat-head"><span>자리</span><span>${esc(tvTableLabel(no))}</span><span></span></div>`;
+    for (let s = 1; s <= maxSeat; s++) {
+      const p = tvAt(no, s), dealer = !tvFinal() && s === DEALER_SEAT;
+      html += `<div class="tseat${dealer ? " dealer" : ""}${p ? "" : " empty"}">
+        <span class="sn">${s}${dealer ? "<small>딜러</small>" : ""}</span>
+        <span class="nm">${p ? esc(p.name) + (p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : "") : "빈자리"}</span>
+        <span class="acts">${p
+          ? (t.status === "done" ? "" : `<button type="button" class="mini-btn bust" data-bust="${p.id}">탈락</button><button type="button" class="mini-btn" data-move="${p.id}">이동</button><button type="button" class="mini-btn" data-more="${p.id}" aria-label="${esc(p.name)} 더보기">⋯</button>`)
+          : (t.status === "done" ? "" : `<button type="button" class="mini-btn" data-sit="${s}">앉히기</button>`)}</span>
+      </div>`;
+    }
+    box.innerHTML = html;
+  }
+
+  /* ---------- 자리·사람 동작 ---------- */
+  $("viewTourney").addEventListener("click", (e) => {
+    unlockAudio();
+    const g = (sel) => e.target.closest(sel);
+    let b;
+    if ((b = g("[data-pick]"))) { tv.table = Number(b.dataset.pick); tvSaveLocal(); renderTV(); return; }
+    if (g("#tvAddTable")) {
+      const no = Math.max(0, ...tvData.tables.map((x) => x.no)) + 1;
+      tvAct("table", { no }, `${no}번 테이블 추가`); return;
+    }
+    if ((b = g("[data-bust]"))) { tvBust(tvPlayers().find((p) => p.id === b.dataset.bust)); return; }
+    if ((b = g("[data-unbust]"))) { tvUnbust(tvPlayers().find((p) => p.id === b.dataset.unbust)); return; }
+    if ((b = g("[data-move]"))) { tvMove(tvPlayers().find((p) => p.id === b.dataset.move)); return; }
+    if ((b = g("[data-more]"))) { tvMore(tvPlayers().find((p) => p.id === b.dataset.more)); return; }
+    if ((b = g("[data-sit]"))) { tvSit(tv.table, Number(b.dataset.sit)); return; }
+    if ((b = g("[data-pdel]"))) { const p = tvPlayers().find((x) => x.id === b.dataset.pdel); if (p) tvAct("player_del", { id: p.id }, `${p.name} 등록 취소`); return; }
+    if (g("#tvFtBtn")) { tvFtDraw(); return; }
+    if (g("#tvFtShow")) { tvShowFt(); return; }
+    if (g("#tvEditTable")) { tvEditTable(); return; }
+  });
+
+  function tvBust(p) {
+    if (!p) return;
+    const S = tvS(), c = tvEff(), r = tvRebuyIdx(S), alive = tvAlive();
+    const rebuyOpen = r >= 0 && c.idx <= r && !tvFinal();
+    const rank = alive.length;
+    if (rebuyOpen) {
+      openModal({
+        title: `${esc(p.name)} 탈락`,
+        body: `<p class="big">아직 리바인 기간이에요.</p><p>${esc(blindText(S.levels[r]))} 레벨까지 리바인할 수 있어요. 리바인하면 그 자리에 그대로 남아요.</p>`,
+        ok: `리바인 (${(p.rebuys || 0) + 1}회째)`, no: `${rank}등 탈락 확정`, noAction: true,
+        onOk: () => tvAct("player_set", { id: p.id, rebuys: (p.rebuys || 0) + 1 }, `${p.name} 리바인 (${(p.rebuys || 0) + 1}회)`),
+        onNo: () => tvDoBust(p)
+      });
+    } else {
+      openModal({ title: `${esc(p.name)} 탈락`, body: `<p class="big">${rank}등으로 탈락 처리해요.</p>`, ok: "탈락", no: "취소", onOk: () => tvDoBust(p) });
+    }
+  }
+  function tvDoBust(p) {
+    const S = tvS(), alive = tvAlive(), after = alive.length - 1, args = { id: p.id };
+    let label = `${p.name} 탈락 (${alive.length}등)`;
+    if (after <= 1) {
+      args.clock = tvPause(tvEff(), tvNow()); args.status = "done";
+      const w = alive.find((x) => x.id !== p.id);
+      label += ` · 우승 ${w ? w.name : ""}`;
+    } else if (!tvFinal() && after <= n0(S.ftSize) && tvTablesInUse(p.id).length > 1 && tvEff().running) {
+      args.clock = tvPause(tvEff(), tvNow());
+      label += ` · ${after}명 남음, 타이머 멈춤`;
+    }
+    tvAct("bust", args, label);
+  }
+  function tvUnbust(p) {
+    if (!p) return;
+    const t = tvT();
+    let no = t.status === "final" || t.status === "done" ? (t.ft_table || p.table_no) : p.table_no, seat = p.seat;
+    if (no == null || seat == null || tvAt(no, seat)) {
+      const tablesTry = [no].concat(tvData.tables.map((x) => x.no)).filter((x) => x != null);
+      seat = null;
+      for (const tn of tablesTry) { const free = tvEmptySeats(tn); if (free.length) { no = tn; seat = shuffle(free)[0]; break; } }
+    }
+    openModal({
+      title: `${esc(p.name)} 탈락 되돌리기`,
+      body: `<p>${tvRankOf(p)}등 탈락을 취소하고 ${no != null && seat != null ? esc(tvTableLabel(no)) + " " + seat + "번 자리로" : "자리 없이"} 돌아가요. 다른 탈락자의 등수는 자동으로 다시 맞춰져요.</p>`,
+      ok: "되돌리기", no: "취소",
+      onOk: () => {
+        const args = { id: p.id, table_no: no, seat };
+        if (t.status === "done") args.status = t.ft_table ? "final" : "running";
+        tvAct("unbust", args, `${p.name} 탈락 취소`);
+      }
+    });
+  }
+  function tvSeatOptions(no, keepSeat) {
+    const free = tvEmptySeats(no);
+    if (keepSeat && !free.includes(keepSeat)) free.push(keepSeat);
+    return `<option value="r">빈자리 랜덤</option>` + free.sort((a, b) => a - b).map((s) => `<option value="${s}">${s}번 자리</option>`).join("");
+  }
+  function tvMove(p) {
+    if (!p) return;
+    const others = tvData.tables.filter((x) => x.no !== p.table_no);
+    const first = (others[0] || tvData.tables[0]).no;
+    openModal({
+      title: `${esc(p.name)} 자리 이동`,
+      body: `<div class="form2"><label>테이블<select id="mvTable">${tvData.tables.map((x) => `<option value="${x.no}"${x.no === first ? " selected" : ""}>${esc(tvTableLabel(x.no))} · ${tvAlive().filter((q) => q.table_no === x.no).length}명</option>`).join("")}</select></label>
+        <label>자리<select id="mvSeat">${tvSeatOptions(first)}</select></label></div>
+        <p>보통은 인원이 적은 테이블의 빈자리로 옮겨요.</p>`,
+      ok: "이동", no: "취소",
+      onOk: () => {
+        const no = Number($("mvTable").value), v = $("mvSeat").value, free = tvEmptySeats(no);
+        const seat = v === "r" ? shuffle(free)[0] : Number(v);
+        if (!seat) { toast("그 테이블에 빈자리가 없어요"); return; }
+        tvAct("player_set", { id: p.id, table_no: no, seat }, `${p.name} → ${tvTableLabel(no)} ${seat}번 자리`);
+      }
+    });
+    $("mvTable").addEventListener("change", () => { $("mvSeat").innerHTML = tvSeatOptions(Number($("mvTable").value)); });
+  }
+  function tvMore(p) {
+    if (!p) return;
+    let rb = p.rebuys || 0;
+    openModal({
+      title: `${esc(p.name)}`,
+      body: `<div class="form2"><label>이름<input id="pmName" value="${esc(p.name)}" list="players" autocomplete="off"></label></div>
+        <div class="rb-step"><span>리바인</span><button type="button" id="pmMinus">−</button><b id="pmRb">${rb}</b><button type="button" id="pmPlus">+</button></div>
+        <button type="button" class="btn-text danger-text" id="pmDel">등록 지우기 (잘못 넣었을 때)</button>`,
+      ok: "저장", no: "취소",
+      onOk: () => {
+        const name = normName($("pmName").value);
+        if (!name) { toast("이름을 적어 주세요"); return; }
+        if (name === p.name && rb === (p.rebuys || 0)) return;
+        tvAct("player_set", { id: p.id, name, rebuys: rb }, `${name} 정보 변경${rb !== (p.rebuys || 0) ? ` (리바인 ${rb}회)` : ""}`);
+      }
+    });
+    $("pmMinus").addEventListener("click", () => { rb = Math.max(0, rb - 1); $("pmRb").textContent = rb; });
+    $("pmPlus").addEventListener("click", () => { rb++; $("pmRb").textContent = rb; });
+    $("pmDel").addEventListener("click", () => {
+      dismissModal();
+      openModal({ title: "등록 지우기", body: `<p>${esc(p.name)}을(를) 토너먼트에서 지워요. 탈락이 아니라 처음부터 없던 사람이 돼요.</p>`, ok: "지우기", no: "취소",
+        onOk: () => tvAct("player_del", { id: p.id }, `${p.name} 등록 지움`) });
+    });
+  }
+  function tvSit(no, seat) {
+    const pool = tvAlive().filter((p) => p.table_no == null);
+    openModal({
+      title: `${esc(tvTableLabel(no))} ${seat}번 자리`,
+      body: `<div class="form2"><label>이름<input id="sitName" list="players" autocomplete="off" placeholder="이름"></label></div>
+        ${pool.length ? `<p>자리 없는 참가자</p><div class="pool">${pool.map((p) => `<button type="button" class="pchip pick" data-poolname="${esc(p.name)}">${esc(p.name)}</button>`).join("")}</div>` : ""}`,
+      ok: "앉히기", no: "취소",
+      onOk: () => {
+        const name = normName($("sitName").value);
+        if (!name) { toast("이름을 적어 주세요"); return; }
+        const p = pool.find((x) => x.name === name);
+        const label = `${name} ${tvTableLabel(no)} ${seat}번 자리`;
+        if (p) tvAct("player_set", { id: p.id, table_no: no, seat }, label);
+        else tvAct("player_add", { name, table_no: no, seat }, label);
+      }
+    });
+    $("mBody").querySelectorAll("[data-poolname]").forEach((b) => b.addEventListener("click", () => { $("sitName").value = b.dataset.poolname; }));
+    setTimeout(() => $("sitName") && $("sitName").focus(), 50);
+  }
+  function tvEditTable() {
+    const no = tv.table; if (!no) return;
+    const tb = tvData.tables.find((x) => x.no === no) || { name: "", dealer: "" };
+    const names = tvAlive().map((p) => p.name);
+    const empty = !tvPlayers().some((p) => p.table_no === no && p.bust_seq == null);
+    openModal({
+      title: `${no}번 테이블`,
+      body: `<div class="form2"><label>테이블 이름 (비우면 4번 자리 이름)<input id="teName" value="${esc(tb.name)}" maxlength="20" autocomplete="off"></label>
+        <label>시작 자리 뽑기 때 딜러 (4번 고정)<select id="teDealer"><option value="">없음</option>${names.map((n) => `<option${n === tb.dealer ? " selected" : ""}>${esc(n)}</option>`).join("")}</select></label></div>
+        ${empty && tvData.tables.length > 1 ? `<button type="button" class="btn-text danger-text" id="teDel">이 테이블 없애기</button>` : ""}`,
+      ok: "저장", no: "취소",
+      onOk: () => tvAct("table", { no, name: $("teName").value.trim(), dealer: $("teDealer").value }, `${no}번 테이블 정보 변경`)
+    });
+    const d = $("teDel");
+    if (d) d.addEventListener("click", () => { dismissModal(); tvAct("table_del", { no }, `${no}번 테이블 없앰`); });
+  }
+
+  /* ---------- 시작 전: 참가자 등록, 시작 자리 뽑기 ---------- */
+  $("tvAddNames").addEventListener("click", async () => {
+    const names = [...new Set($("tvNames").value.split(/[,\n]/).map(normName).filter(Boolean))];
+    if (!names.length) { toast("이름을 적어 주세요"); return; }
+    const have = new Set(tvPlayers().map((p) => p.name));
+    const fresh = names.filter((n) => !have.has(n));
+    if (!fresh.length) { toast("이미 등록된 이름이에요"); return; }
+    const res = await tvAct("players_add", { names: fresh }, `참가자 ${fresh.length}명 등록`);
+    if (res) { $("tvNames").value = ""; toast(`${fresh.length}명 등록했어요`); }
+  });
+  $("tvDraw").addEventListener("click", () => {
+    const tables = tvData.tables.slice().sort((a, b) => a.no - b.no), S = tvSeatsOf();
+    const alive = tvAlive();
+    if (alive.length < 2) { toast("참가자를 2명 이상 등록해 주세요"); return; }
+    if (alive.length > tables.length * S) { toast(`자리가 모자라요. 테이블을 추가해 주세요 (${tables.length * S}자리)`); return; }
+    const list = [], count = {}, taken = {};
+    tables.forEach((x) => { count[x.no] = 0; taken[x.no] = new Set(); });
+    const dealerIds = new Set();
+    tables.forEach((x) => {
+      const d = x.dealer && alive.find((p) => p.name === x.dealer && !dealerIds.has(p.id));
+      if (d) { dealerIds.add(d.id); list.push({ id: d.id, table_no: x.no, seat: DEALER_SEAT }); count[x.no]++; taken[x.no].add(DEALER_SEAT); }
+    });
+    shuffle(alive.filter((p) => !dealerIds.has(p.id))).forEach((p) => {
+      const tb = tables.filter((x) => count[x.no] < S).sort((a, b) => count[a.no] - count[b.no] || Math.random() - 0.5)[0];
+      const free = []; for (let s = 1; s <= S; s++) if (!taken[tb.no].has(s)) free.push(s);
+      const seat = shuffle(free)[0];
+      taken[tb.no].add(seat); count[tb.no]++;
+      list.push({ id: p.id, table_no: tb.no, seat });
+    });
+    openModal({
+      title: "시작 자리 뽑기",
+      body: `<p>${alive.length}명을 테이블 ${tables.length}개에 고르게 나눠 랜덤으로 앉혀요. 딜러로 정한 사람은 4번 자리에 고정돼요. 이미 앉은 자리도 새로 뽑아요.</p>`,
+      ok: "뽑기", no: "취소",
+      onOk: async () => {
+        const res = await tvAct("assign", { list }, "시작 자리 뽑기");
+        if (res) tvShowSeats("시작 자리", tables.map((x) => x.no));
+      }
+    });
+  });
+  function tvShowSeats(title, nos) {
+    const body = nos.map((no) => {
+      const ps = tvAlive().filter((p) => p.table_no === no).sort((a, b) => a.seat - b.seat);
+      if (!ps.length) return "";
+      return `<div class="seat-res"><b>${esc(tvTableLabel(no))}</b><ol>${ps.map((p) => `<li><span>${p.seat}번</span>${esc(p.name)}${!tvFinal() && p.seat === DEALER_SEAT ? " <small>딜러</small>" : ""}</li>`).join("")}</ol></div>`;
+    }).join("");
+    showNotice(title, body || "<p>앉은 사람이 없어요.</p>");
+  }
+
+  /* ---------- 파이널 테이블 ---------- */
+  function tvFtDraw() {
+    const alive = tvAlive(), S = tvSeatsOf();
+    if (alive.length > S) { toast(`테이블당 자리(${S})보다 사람이 많아요. 토너 세팅에서 자리 수를 늘려 주세요`); return; }
+    const def = tv.table || tvData.tables[0].no;
+    openModal({
+      title: "파이널 테이블 자리 뽑기",
+      body: `<p>남은 ${alive.length}명을 한 테이블에 모으고 자리를 랜덤으로 뽑아요. 파이널 테이블에서는 4번 딜러 규칙이 없어요.</p>
+        <div class="form2"><label>파이널 테이블로 쓸 테이블<select id="ftNo">${tvData.tables.map((x) => `<option value="${x.no}"${x.no === def ? " selected" : ""}>${esc(tvTableLabel(x.no))}</option>`).join("")}</select></label></div>`,
+      ok: "뽑기", no: "취소",
+      onOk: async () => {
+        const no = Number($("ftNo").value);
+        const seats = shuffle(Array.from({ length: S }, (_, i) => i + 1));
+        const list = shuffle(alive).map((p, i) => ({ id: p.id, table_no: no, seat: seats[i] }));
+        const res = await tvAct("assign", { list, status: "final", ft_table: no, clock: tvPause(tvEff(), tvNow()) }, "파이널 테이블 자리 뽑기");
+        if (res) { tv.table = no; tvSaveLocal(); renderTV(); tvShowFt(); }
+      }
+    });
+  }
+  function tvShowFt() { if (tvData && tvT().ft_table) tvShowSeats("파이널 테이블 자리", [tvT().ft_table]); }
+  function tvShowWinner() {
+    const w = tvAlive()[0];
+    if (w) { levelUpSound(); showNotice("우승!", `<p class="big">🏆 ${esc(w.name)}</p><p>최종 순위는 아래에 있어요. 결과 복사로 카톡에 올릴 수 있어요.</p>`); }
+  }
+  $("tvCopy").addEventListener("click", () => {
+    const d = tvT().created_on;
+    const text = [`[${dayLabel(d).replace(/\s*\(.\)$/, "")} 나나덤 토너먼트]`]
+      .concat(tvStandings().map((x) => `${x.rank}등 ${x.p.name}${x.p.rebuys ? ` (리바인 ${x.p.rebuys})` : ""}`)).join("\n");
+    const fallback = () => { $("tvCopyText").hidden = false; const ta = $("tvCopyText"); ta.value = text; ta.focus(); ta.select(); };
+    try { navigator.clipboard.writeText(text).then(() => toast("복사했어요. 카톡에 붙여넣으세요"), fallback); } catch (e) { fallback(); }
+  });
+
+  /* ---------- 토너 세팅 (시작 전·일시정지 중에만) ---------- */
+  function tvDraftFrom() {
+    const S = tvS(), c = tvEff();
+    return { levels: JSON.parse(JSON.stringify(S.levels)), ftSize: n0(S.ftSize) || 8, seats: tvSeatsOf(), startMin: n0(S.startMin) || 10, dur: n0(c.dur) || 10 };
+  }
+  /* opt: "keep" = 고치던 내용 그대로 다시 그림, "reset" = 서버 값으로 새로 */
+  function tvRenderSettings(opt) {
+    if (!tvData) return;
+    const body = $("tvSetBody");
+    if (opt !== "keep" && body.contains(document.activeElement) && tvDraft) return;
+    const t = tvT(), running = tvEff().running, locked = running || t.status === "done";
+    if (opt === "reset" || !tvDraft || (!tvDraftDirty && tvDraftRev !== t.rev)) { tvDraft = tvDraftFrom(); tvDraftRev = t.rev; tvDraftDirty = false; }
+    const D = tvDraft, dis = locked ? " disabled" : "";
+    let rows = `<div class="lv-row head"><span>레벨</span><span>스몰</span><span></span><span>빅</span><span>리바인</span><span></span></div>`;
+    D.levels.forEach((x, i) => {
+      const no = x.brk ? "휴식" : D.levels.slice(0, i + 1).filter((y) => !y.brk).length;
+      rows += `<div class="lv-row${x.brk ? " brk" : ""}" data-i="${i}"><span class="lv-no">${no}</span>
+        ${x.brk ? `<span class="brk-label">쉬는 시간 (분)</span><input data-k="min" inputmode="decimal" value="${x.min}"${dis} aria-label="휴식 시간(분)">`
+          : `<input data-k="sb" inputmode="numeric" value="${x.sb}"${dis} aria-label="스몰"><span class="slash">/</span><input data-k="bb" inputmode="numeric" value="${x.bb}"${dis} aria-label="빅">
+             <button class="rb-tog${x.rebuy ? " on" : ""}" type="button" data-trb="${i}"${dis}>${x.rebuy ? "마감" : "·"}</button>`}
+        <button class="lv-del" type="button" data-tdel="${i}"${dis || (D.levels.length < 2 ? " disabled" : "")} aria-label="삭제">×</button></div>`;
+    });
+    body.innerHTML = `
+      ${locked ? `<p class="lock-note">${t.status === "done" ? "끝난 토너먼트예요." : "타이머가 돌아가는 중에는 바꿀 수 없어요. 일시정지한 뒤에 바꿔 주세요."}</p>` : `<p>바꾼 뒤 '세팅 저장'을 누르면 모든 테이블에 반영돼요.</p>`}
+      <div class="tset">
+        <label>파이널 테이블 인원<input data-f="ftSize" inputmode="numeric" value="${D.ftSize}"${dis}></label>
+        <label>테이블당 자리<input data-f="seats" inputmode="numeric" value="${D.seats}"${dis}></label>
+        <label>시작 레벨 시간(분)<input data-f="startMin" inputmode="decimal" value="${fmt(D.startMin)}"${dis}></label>
+        <label>지금 레벨 시간(분)<input data-f="dur" inputmode="decimal" value="${fmt(D.dur)}"${dis}></label>
+      </div>
+      <p>지금 레벨 시간은 진행 중인 레벨에는 남은 시간 그대로, 다음 레벨부터 적용돼요. 탈락해도 자동으로 바뀌지 않으니 필요할 때 여기서 바꿔요.</p>
+      <div class="lv-list">${rows}</div>
+      <div class="struct-tools">
+        <button class="btn-line" type="button" id="tsAddLv"${dis}>레벨 추가</button>
+        <button class="btn-line" type="button" id="tsAddBrk"${dis}>휴식 추가</button>
+      </div>
+      <div class="struct-tools">
+        <button class="btn-line" type="button" id="tsMine"${dis}>내 폰 블라인드 구조 불러오기</button>
+        <button class="btn-save" type="button" id="tsSave"${dis}>세팅 저장</button>
+      </div>`;
+  }
+  $("tvSetBody").addEventListener("input", (e) => {
+    const inp = e.target.closest("input"); if (!inp || !tvDraft) return;
+    inp.value = inp.value.replace(/[^0-9.]/g, "");
+    tvDraftDirty = true;
+    if (inp.dataset.f) tvDraft[inp.dataset.f] = inp.value;
+    else { const i = +inp.closest(".lv-row").dataset.i; tvDraft.levels[i][inp.dataset.k] = inp.value; }
+  });
+  $("tvSetBody").addEventListener("click", (e) => {
+    if (!tvDraft) return;
+    const b = e.target.closest("button"); if (!b || b.disabled) return;
+    const D = tvDraft;
+    if (b.dataset.trb != null) { const i = +b.dataset.trb, on = !D.levels[i].rebuy; D.levels.forEach((x) => delete x.rebuy); if (on) D.levels[i].rebuy = true; }
+    else if (b.dataset.tdel != null) D.levels.splice(+b.dataset.tdel, 1);
+    else if (b.id === "tsAddLv") { const lastLv = [...D.levels].reverse().find((x) => !x.brk) || { bb: 200 }; const bb = nice(n0(lastLv.bb) * 1.5 || 200); D.levels.push({ sb: bb / 2, bb }); }
+    else if (b.id === "tsAddBrk") D.levels.push({ brk: true, min: 10 });
+    else if (b.id === "tsMine") { D.levels = JSON.parse(JSON.stringify(struct.levels)); D.startMin = startMin(); toast("내 폰의 블라인드 구조를 불러왔어요. 저장해야 반영돼요"); }
+    else if (b.id === "tsSave") { tvSaveSettings(); return; }
+    else return;
+    tvDraftDirty = true; tvRenderSettings("keep");
+  });
+  function tvSaveSettings() {
+    const D = tvDraft, t = tvT();
+    const levels = D.levels.map((x) => x.brk ? { brk: true, min: n0(x.min) || 10 } : Object.assign({ sb: n0(x.sb), bb: n0(x.bb) }, x.rebuy ? { rebuy: true } : {}));
+    if (!levels.length || levels.some((x) => !x.brk && (!x.sb || !x.bb))) { toast("블라인드 칸에 빈 곳이 있어요"); return; }
+    const ftSize = Math.round(n0(D.ftSize)), seats = Math.round(n0(D.seats)), startM = n0(D.startMin), durM = n0(D.dur);
+    if (ftSize < 2 || seats < 2 || seats > 12 || startM <= 0 || durM <= 0) { toast("숫자를 확인해 주세요 (자리 2~12, 시간 0보다 크게)"); return; }
+    const settings = { levels, ftSize, seats, startMin: startM };
+    let c = tvEff();
+    c = Object.assign({}, c, { dur: t.status === "setup" ? startM : durM });
+    if (c.idx > levels.length - 1) c.idx = levels.length - 1;
+    if (!c.running && c.remain == null) c.levelLen = null;
+    tvDraftDirty = false;
+    tvAct("settings", { settings, clock: c }, "토너 세팅 변경").then((r) => { if (r) { toast("세팅을 저장했어요"); tvRenderSettings("reset"); } else tvDraftDirty = true; });
+  }
+
+  /* ---------- 토너먼트 목록 (오늘) ---------- */
+  async function tvLoadLobby(quiet) {
+    if (!quiet) $("tvList").innerHTML = `<div class="empty-note">불러오는 중…</div>`;
+    let rows;
+    try { rows = await sb(`holdem_tourneys?select=id,created_at,status,last_action&created_on=eq.${isoDay(Date.now())}&order=created_at.desc`); }
+    catch (e) { $("tvList").innerHTML = `<div class="empty-note">불러오지 못했어요. 인터넷 연결을 확인해 주세요.</div>`; return; }
+    const st = { setup: "시작 전", running: "진행 중", final: "파이널 테이블", done: "끝남" };
+    $("tvList").innerHTML = rows.length ? rows.map((r) => `<div class="game"><div class="game-top"><b>${hhmm(new Date(r.created_at).getTime())}에 만든 토너먼트</b><span>${st[r.status] || ""}</span></div>
+        <span class="saved">${esc(r.last_action || "")}</span><button type="button" class="btn-line" data-join="${r.id}">참가하기</button></div>`).join("")
+      : `<div class="empty-note">오늘 만든 토너먼트가 없어요.</div>`;
+  }
+  $("tvList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-join]"); if (!b) return;
+    tvJoin(b.dataset.join);
+  });
+  function tvJoin(id) {
+    tv = { id, table: null }; tvSaveLocal();
+    tvData = null; tvSeenAt = null; tvPrevIdx = null; tvPrevStatus = null; tvDraft = null;
+    renderTV(); tvFetch();
+  }
+  $("tvCreate").addEventListener("click", async () => {
+    const settings = { levels: JSON.parse(JSON.stringify(struct.levels)), ftSize: 8, seats: 8, startMin: startMin() };
+    const clockInit = { idx: 0, running: false, endsAt: null, remain: null, levelLen: null, dur: startMin() };
+    const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 새 토너먼트를 만들어요.",
+      (pin) => sb("rpc/holdem_t_create", { p_pin: pin, p_settings: settings, p_clock: clockInit, p_who: "딜러" }));
+    if (res) { toast("토너먼트를 만들었어요. 내 테이블을 고르세요"); tvJoin(res.id); }
+  });
+  $("tvLeave").addEventListener("click", () => { tv = {}; tvSaveLocal(); tvData = null; renderTV(); });
+  twoTap($("tvDelete"), "토너먼트 지우기", "한 번 더 누르면 지워요", async () => {
+    await tvAct("delete", {}, null);
+  });
+
+  setInterval(() => { if (tv.id && tvActive() && document.visibilityState === "visible" && !tvBusy) tvFetch(); }, 2000);
+  setInterval(() => { if (!tv.id && tvActive() && document.visibilityState === "visible") tvLoadLobby(true); }, 4000);   // 목록도 자동 새로고침
+  setInterval(tvTick, 250);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && tvActive() && tv.id) tvFetch(); });
+
+
   function route(forceSheet) {
-    const rank = !forceSheet && location.hash === "#ranking";
-    $("viewSheet").hidden = rank; $("viewRank").hidden = !rank;
-    $("tabSheet").classList.toggle("on", !rank); $("tabRank").classList.toggle("on", rank);
-    $("tabSheet").setAttribute("aria-current", rank ? "false" : "page");
-    $("tabRank").setAttribute("aria-current", rank ? "page" : "false");
-    if (rank && rankStale) loadRank();
+    const v = forceSheet ? "" : location.hash === "#ranking" ? "rank" : location.hash === "#tourney" ? "tv" : "";
+    $("viewSheet").hidden = v !== ""; $("viewRank").hidden = v !== "rank"; $("viewTourney").hidden = v !== "tv";
+    [["tabSheet", ""], ["tabRank", "rank"], ["tabTourney", "tv"]].forEach(([id, key]) => {
+      $(id).classList.toggle("on", v === key); $(id).setAttribute("aria-current", v === key ? "page" : "false");
+    });
+    $("table").parentElement.hidden = v !== "";
+    if (v === "rank" && rankStale) loadRank();
+    if (v === "tv") { renderTV(); tvFetch(); }
+    updateMini();
   }
   window.addEventListener("hashchange", () => route());
 
