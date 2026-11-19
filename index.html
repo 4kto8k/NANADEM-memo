@@ -242,7 +242,7 @@ details.struct[open] summary::after { content: "접기"; }
   border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 14px/1.5 var(--font);
 }
 .toast {
-  position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 45;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   background: var(--chalk); color: var(--felt); font-weight: 700; font-size: 14px;
   padding: 10px 16px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .2s;
@@ -488,38 +488,77 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .num { cursor: pointer; }
 .num .rbc { margin-top: 2px; }
 
-/* ===== 폰 가로 화면: 왼쪽에 타이머 고정, 오른쪽은 스크롤 =====
-   (높이가 낮은 가로 화면만. 태블릿 가로는 세로와 같은 한 줄 배치) */
+/* ===== 폰 가로 화면: 타이머를 화면 전체에 크게, 자리·블라인드·메뉴는 오른쪽 패널로 =====
+   가로(높이 560px 이하)이고 타이머가 있는 화면일 때 JS가 body에 .land 를 붙이고 타이머를 #stage 로 옮김 */
+#stage, #landNav { display: none; }
 @media (orientation: landscape) and (max-height: 560px) {
-  :root { --tw: min(44vw, 440px); --tl: max(10px, env(safe-area-inset-left, 0px)); }
-  .wrap { max-width: 760px; padding-block: 10px 28px; }
-  .wrap.has-timer {
-    max-width: none; margin: 0;
-    padding-left: calc(var(--tl) + var(--tw) + 14px);
-  }
-  .wrap.has-timer .timer {
-    position: fixed; z-index: 5; left: var(--tl); width: var(--tw);
-    top: calc(8px + env(safe-area-inset-top, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-    display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
-    padding: 10px 12px; overflow-y: auto; overscroll-behavior: contain;
-  }
-  .wrap.has-timer .timer .blinds .k { display: none; }
-  .wrap.has-timer .timer .blinds .v { font-size: clamp(24px, 10vh, 46px); }
-  .wrap.has-timer .timer .count { font-size: clamp(50px, 22vh, 130px); }
-  .wrap.has-timer .t-adj { gap: 4px; }
-  .wrap.has-timer .t-adj button { padding: 6px 0; font-size: 12px; }
-  .wrap.has-timer .t-ctrl .btn-main, .wrap.has-timer .t-ctrl .btn-side { padding: 9px 6px; font-size: 15px; }
-  .wrap.has-timer .t-info .pill { padding: 3px 8px; font-size: 11px; }
-  .wrap.has-timer .game-row { padding-top: 6px; font-size: 12px; }
-  .wrap.has-timer .btn-end { padding: 4px 10px; }
-  .mini { display: none; }                          /* 타이머가 늘 보이니 위쪽 작은 타이머는 필요 없음 */
+  :root { --dw: min(62vw, 560px); }
+  .mini { display: none; }
   h1 { font-size: 19px; }
   .tabs a { padding: 7px 6px; font-size: 13px; }
   .modal .sheet { max-width: 520px; }
+
+  body.land #stage {
+    display: block; position: fixed; z-index: 10;
+    top: calc(6px + env(safe-area-inset-top, 0px)); bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px));
+  }
+  body.land #stage .timer {
+    position: absolute; inset: 0; border-radius: 18px; padding: 10px 16px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto 38px;
+    grid-template-areas: "top top" "bl bl" "ct ct" "bar bar" "ctrl adj" "game .";
+    gap: 6px 12px; overflow: hidden;
+  }
+  body.land #stage .t-top { grid-area: top; font-size: 15px; }
+  body.land #stage .t-top .lv-chip { font-size: 15px; padding: 4px 12px; }
+  body.land #stage .t-next b { font-size: 17px; }
+  body.land #stage .t-info { grid-area: top; justify-self: center; align-self: center; }
+  body.land #stage .blinds { grid-area: bl; }
+  body.land #stage .blinds .k { display: none; }
+  body.land #stage .blinds .v { font-size: clamp(30px, 15vh, 84px); line-height: 1.05; }
+  body.land #stage .count { grid-area: ct; align-self: center; font-size: clamp(64px, 39vh, 230px); line-height: 0.95; }
+  body.land #stage .bar { grid-area: bar; }
+  body.land #stage .t-ctrl { grid-area: ctrl; }
+  body.land #stage .t-adj { grid-area: adj; gap: 5px; }
+  body.land #stage .t-adj button { padding: 0; font-size: 13px; }
+  body.land #stage .t-ctrl .btn-main, body.land #stage .t-ctrl .btn-side { padding: 9px 6px; font-size: 15px; }
+  body.land #stage .t-info .pill { padding: 3px 9px; font-size: 12px; }
+  body.land #stage .game-row { grid-area: game; border-top: 0; padding-top: 0; font-size: 12px; align-self: center; }
+  body.land #stage .btn-end { padding: 5px 10px; }
+
+  /* 오른쪽 아래 버튼 */
+  body.land #landNav {
+    display: flex; gap: 6px; position: fixed; z-index: 12;
+    right: calc(max(8px, env(safe-area-inset-right, 0px)) + 14px); bottom: calc(6px + env(safe-area-inset-bottom, 0px) + 10px);
+  }
+  #landNav button {
+    border: 1px solid var(--line); background: var(--well); color: var(--chalk); border-radius: 10px;
+    padding: 7px 14px; font-size: 14px; font-weight: 700;
+  }
+  #landNav button.on { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+
+  /* 오른쪽 패널 = 원래 페이지 전체 */
+  body.land .wrap {
+    position: fixed; z-index: 30; top: 0; bottom: 0; right: calc(-1 * var(--dw) - 30px); width: var(--dw);
+    max-width: none; margin: 0; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--felt); border-left: 1px solid var(--line); box-shadow: -12px 0 30px rgba(0, 0, 0, 0.45);
+    padding-block: 0 calc(28px + env(safe-area-inset-bottom, 0px));
+    padding-left: 14px; padding-right: max(14px, env(safe-area-inset-right, 0px));
+    transition: right .22s ease-out; visibility: hidden;
+  }
+  body.land.drawer .wrap { right: 0; visibility: visible; }
+  body.land .drawer-close { display: flex; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
 }
+.drawer-close {
+  display: none; position: sticky; top: 0; z-index: 2; justify-content: space-between; align-items: center;
+  background: var(--felt); padding-block: 2px 8px;
+}
+.drawer-close button { border: 1px solid var(--line); background: var(--rail); color: var(--chalk); border-radius: 10px; padding: 8px 14px; font-weight: 700; font-size: 14px; }
+.drawer-close span { font-size: 12px; color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast, .mini { transition: none; }
+  .toast, .mini, body.land .wrap { transition: none; }
   .timer.flash { animation: none; }
 }
 </style>
@@ -533,7 +572,14 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   <button type="button" id="m-btn" tabindex="-1">일시정지</button>
 </div>
 
+<div id="stage" aria-label="블라인드 타이머 전체 화면"></div>
+<nav id="landNav" aria-label="패널 열기">
+  <button type="button" data-open="seats">자리</button>
+  <button type="button" data-open="blinds">블라인드</button>
+  <button type="button" data-open="menu">메뉴</button>
+</nav>
 <div class="wrap">
+  <div class="drawer-close"><button type="button" id="drawerClose">✕ 타이머로</button><span>패널 밖 빈 곳을 눌러도 닫혀요</span></div>
   <div class="appbar" id="appBar" hidden></div>
   <header class="top">
     <h1><span class="suit">♠</span>홀덤 기록표</h1>
@@ -2607,10 +2653,44 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     updateMini();
   }
   /* 가로 화면에서 타이머를 왼쪽에 고정할지: 타이머가 있는 화면(오늘 기록표, 진행 중인 토너먼트)일 때만 */
+  /* 폰 가로: 지금 화면의 타이머를 #stage(전체 화면)로 옮기고, 페이지는 오른쪽 패널로.
+     세로로 돌아오거나 타이머 없는 화면이면 타이머를 원래 자리로 되돌림. */
+  const landMQ = window.matchMedia ? matchMedia("(orientation: landscape) and (max-height: 560px)") : null;
+  const timerHome = {};
+  ["timer", "ttimer"].forEach((id) => { const el = $(id), m = document.createComment(id); el.parentNode.insertBefore(m, el); timerHome[id] = m; });
+  const sendHome = (id) => { const el = $(id), m = timerHome[id]; if (el.parentNode !== m.parentNode || el.previousSibling !== m) m.parentNode.insertBefore(el, m.nextSibling); };
   function syncLayout() {
-    const on = !$("viewSheet").hidden || (!$("viewTourney").hidden && !$("tvMain").hidden);
-    document.querySelector(".wrap").classList.toggle("has-timer", on);
+    const sheet = !$("viewSheet").hidden, tour = !$("viewTourney").hidden && !$("tvMain").hidden;
+    const land = !!(landMQ && landMQ.matches) && (sheet || tour);
+    const want = land ? (sheet ? "timer" : "ttimer") : null;
+    ["timer", "ttimer"].forEach((id) => { if (id === want) { if ($(id).parentNode !== $("stage")) $("stage").appendChild($(id)); } else sendHome(id); });
+    document.body.classList.toggle("land", land);
+    if (!land) setDrawer(false);
   }
+  function setDrawer(open, target) {
+    document.body.classList.toggle("drawer", !!open);
+    $("landNav").querySelectorAll("button").forEach((b) => b.classList.toggle("on", !!open && b.dataset.open === target));
+    if (!open) return;
+    const wrap = document.querySelector(".wrap"), tour = !$("viewTourney").hidden;
+    let el = null;
+    if (target === "seats") el = tour ? $("tvSeats") : document.querySelector("#viewSheet .board");
+    if (target === "blinds") { el = tour ? $("tvSettings") : $("struct"); el.open = true; if (tour) tvRenderSettings(); }
+    requestAnimationFrame(() => {
+      if (!el) { wrap.scrollTop = 0; return; }
+      wrap.scrollTop = Math.max(0, el.getBoundingClientRect().top - wrap.getBoundingClientRect().top + wrap.scrollTop - 52);
+    });
+  }
+  $("landNav").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open]"); if (!b) return;
+    const already = document.body.classList.contains("drawer") && b.classList.contains("on");
+    setDrawer(!already, b.dataset.open);
+  });
+  $("drawerClose").addEventListener("click", () => setDrawer(false));
+  $("stage").addEventListener("click", (e) => {          // 패널이 열려 있을 때 타이머의 빈 곳을 누르면 닫기
+    if (document.body.classList.contains("drawer") && !e.target.closest("button, input, .count")) setDrawer(false);
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("drawer") && $("modal").hidden) setDrawer(false); });
+  if (landMQ) (landMQ.addEventListener ? landMQ.addEventListener("change", syncLayout) : landMQ.addListener(syncLayout));
   window.addEventListener("hashchange", () => route());
 
   /* ---------- 홈 화면 앱 안내 ----------
