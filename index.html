@@ -537,6 +537,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     padding: 7px 14px; font-size: 14px; font-weight: 700;
   }
   #landNav button.on { background: var(--green); color: var(--green-ink); border-color: var(--green); }
+  #landNav .awake { align-self: center; font-size: 12px; font-weight: 700; padding: 0 6px; white-space: nowrap; }
+  #landNav .awake.on { color: var(--gold); }
+  #landNav .awake.off { color: var(--red); }
 
   /* 오른쪽 패널 = 원래 페이지 전체 */
   body.land .wrap {
@@ -574,6 +577,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
 <div id="stage" aria-label="블라인드 타이머 전체 화면"></div>
 <nav id="landNav" aria-label="패널 열기">
+  <span class="awake" id="awakeBadge" hidden></span>
   <button type="button" data-open="seats">자리</button>
   <button type="button" data-open="blinds">블라인드</button>
   <button type="button" data-open="menu">메뉴</button>
@@ -833,6 +837,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="vendor/NoSleep.min.js"></script>
 <script>
 (function () {
   const SEATS = 8;
@@ -1317,19 +1322,53 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
 
   /* wake lock while the game runs */
-  let wakeLock = null;
-  async function keepAwake(on) {
-    try {
-      if (on && !wakeLock && navigator.wakeLock && document.visibilityState === "visible") {
-        wakeLock = await navigator.wakeLock.request("screen");
-        wakeLock.addEventListener("release", () => { wakeLock = null; });
-      } else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
-    } catch (e) { wakeLock = null; }
+  /* ---------- 화면 꺼짐 방지 ----------
+     켜는 때: 가로 전체 화면 타이머가 떠 있을 때(게임 전·일시정지 중 포함), 게임 진행 중, 여러 테이블 타이머가 도는 중.
+     1순위: 브라우저 기능(Wake Lock). 이 기능이 없는 폰(카톡 안 브라우저, 예전 아이폰 등)은
+     NoSleep.js(소리 없는 짧은 영상 반복)로 대신하는데, 화면을 한 번 눌러야 시작돼요. */
+  let wakeLock = null, noSleep = null, wakeFailAt = 0, wakeBusy = false;
+  function wantAwake() {
+    if (document.body.classList.contains("land")) return true;
+    if (state.start && !state.end) return true;
+    try { if (tvActive() && tvData && tvEff().running) return true; } catch (e) {}
+    return false;
   }
-  document.addEventListener("visibilitychange", () => {
-    if (state.start && !state.end) keepAwake(true);
-    tick();
-  });
+  const awakeOn = () => !!wakeLock || !!(noSleep && noSleep.isEnabled);
+  async function updateAwake(gesture) {
+    if (wakeBusy) return;
+    wakeBusy = true;
+    try {
+      const want = wantAwake() && document.visibilityState === "visible";
+      if (!want) {
+        if (wakeLock) { try { await wakeLock.release(); } catch (e) {} wakeLock = null; }
+        if (noSleep && noSleep.isEnabled) { try { noSleep.disable(); } catch (e) {} }
+      } else if (!awakeOn()) {
+        if (navigator.wakeLock) {
+          if (Date.now() - wakeFailAt > 8000) {
+            try {
+              wakeLock = await navigator.wakeLock.request("screen");
+              wakeLock.addEventListener("release", () => { wakeLock = null; renderAwake(); setTimeout(() => updateAwake(), 600); });
+            } catch (e) { wakeLock = null; wakeFailAt = Date.now(); }
+          }
+        } else if (gesture && window.NoSleep) {
+          try { noSleep = noSleep || new window.NoSleep(); await noSleep.enable(); } catch (e) {}
+        }
+      }
+    } finally { wakeBusy = false; renderAwake(); }
+  }
+  function renderAwake() {
+    const el = $("awakeBadge"); if (!el) return;
+    const want = wantAwake();
+    el.hidden = !want;
+    el.className = "awake" + (awakeOn() ? " on" : " off");
+    el.textContent = awakeOn() ? "☀ 화면 켜짐 유지" : navigator.wakeLock ? "화면 꺼짐 방지 안 됨" : "화면을 한 번 눌러 주세요";
+    el.title = awakeOn() ? "이 화면을 띄워 두는 동안 화면이 꺼지지 않아요" : "이 폰에서는 화면 꺼짐 방지가 아직 켜지지 않았어요";
+  }
+  function keepAwake() { updateAwake(); }      // 예전 호출부 호환: 켜야 할지는 wantAwake()가 정함
+  /* 영상 방식은 화면을 누를 때만 시작할 수 있어서, 누를 때마다 확인 */
+  ["click", "touchend"].forEach((ev) => document.addEventListener(ev, () => { if (wantAwake() && !awakeOn()) updateAwake(true); }, true));
+  document.addEventListener("visibilitychange", () => { updateAwake(); tick(); });
+  setInterval(() => updateAwake(), 2000);
 
   /* ---------- structure editor ---------- */
   const nice = (x) => { const p = Math.pow(10, Math.floor(Math.log10(x)) - 1); return Math.round(x / p) * p; };
@@ -2666,6 +2705,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     ["timer", "ttimer"].forEach((id) => { if (id === want) { if ($(id).parentNode !== $("stage")) $("stage").appendChild($(id)); } else sendHome(id); });
     document.body.classList.toggle("land", land);
     if (!land) setDrawer(false);
+    updateAwake();
   }
   function setDrawer(open, target) {
     document.body.classList.toggle("drawer", !!open);
