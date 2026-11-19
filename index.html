@@ -284,7 +284,13 @@ details.struct[open] summary::after { content: "접기"; }
   font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
 }
 .t-adj button.edit { color: var(--chalk); }
-.count { cursor: pointer; }
+/* 큰 시간 숫자: 1초 꾹 눌러야 시간 수정 창. 누르는 동안 살짝 눌린 모양 */
+.count {
+  cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+  transition: transform 1s linear, opacity 1s linear;
+}
+.count.pressing { transform: scale(0.94); opacity: 0.6; }
+.count.locked.pressing { transform: none; opacity: 1; }
 .time-in { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; color: var(--muted); }
 .time-in input {
   width: 76px; background: var(--well); border: 1px solid var(--line); border-radius: 10px; padding: 10px 4px;
@@ -561,7 +567,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .drawer-close span { font-size: 12px; color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast, .mini, body.land .wrap { transition: none; }
+  .toast, .mini, body.land .wrap, .count { transition: none; }
   .timer.flash { animation: none; }
 }
 </style>
@@ -609,7 +615,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       <span class="k" id="t-bk">스몰 / 빅 블라인드</span>
       <span class="v" id="t-bl">100 / 200</span>
     </div>
-    <div class="count paused" id="t-ct" role="timer" aria-live="off" title="눌러서 남은 시간 바꾸기">10:00</div>
+    <div class="count paused" id="t-ct" role="timer" aria-live="off" title="1초 꾹 누르면 남은 시간 바꾸기">10:00</div>
     <div class="t-adj" aria-label="남은 시간 조절">
       <button type="button" data-adj="-60000">−1분</button>
       <button type="button" data-adj="-10000">−10초</button>
@@ -750,7 +756,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         <span class="k" id="tt-bk">스몰 / 빅 블라인드</span>
         <span class="v" id="tt-bl">100 / 200</span>
       </div>
-      <div class="count paused" id="tt-ct" role="timer" aria-live="off" title="눌러서 남은 시간 바꾸기">10:00</div>
+      <div class="count paused" id="tt-ct" role="timer" aria-live="off" title="1초 꾹 누르면 남은 시간 바꾸기">10:00</div>
       <div class="t-adj" id="tt-adj" aria-label="남은 시간 조절">
         <button type="button" data-adj="-60000">−1분</button>
         <button type="button" data-adj="-10000">−10초</button>
@@ -1218,7 +1224,27 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const f = $("setMin"); f.focus(); f.select();
   }
   $("t-set").addEventListener("click", editRemaining);
-  $("t-ct").addEventListener("click", editRemaining);
+  /* 꾹 누르기(기본 1초). 손이 스치거나 짧게 누르면 아무 일도 없음. 손가락이 움직이면 취소 */
+  function longPress(el, fn, ms = 1000) {
+    let timer = null, sx = 0, sy = 0, fired = false;
+    const cancel = () => { clearTimeout(timer); timer = null; el.classList.remove("pressing"); };
+    el.addEventListener("pointerdown", (e) => {
+      if (e.button && e.button !== 0) return;
+      fired = false; sx = e.clientX; sy = e.clientY;
+      el.classList.add("pressing");
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null; fired = true; el.classList.remove("pressing");
+        try { navigator.vibrate && navigator.vibrate(30); } catch (e2) {}
+        fn();
+      }, ms);
+    });
+    el.addEventListener("pointermove", (e) => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) cancel(); });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => el.addEventListener(ev, cancel));
+    el.addEventListener("contextmenu", (e) => e.preventDefault());          // 꾹 누를 때 뜨는 폰 메뉴 막기
+    el.addEventListener("click", (e) => { if (fired) { e.stopPropagation(); fired = false; } }, true);   // 꾹 누른 뒤 손 뗄 때의 클릭은 무시
+  }
+  longPress($("t-ct"), editRemaining);
 
   /* ---------- 레벨 시간 기본값(시작·탈락별) ---------- */
   function renderDurSet() {
@@ -2120,7 +2146,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const f = $("setMin"); f.focus(); f.select();
   }
   $("tt-set").addEventListener("click", tvEditRem);
-  $("tt-ct").addEventListener("click", tvEditRem);
+  longPress($("tt-ct"), tvEditRem);
 
   /* ---------- 화면 그리기 ---------- */
   function renderTV() {
@@ -2727,7 +2753,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
   $("drawerClose").addEventListener("click", () => setDrawer(false));
   $("stage").addEventListener("click", (e) => {          // 패널이 열려 있을 때 타이머의 빈 곳을 누르면 닫기
-    if (document.body.classList.contains("drawer") && !e.target.closest("button, input, .count")) setDrawer(false);
+    if (document.body.classList.contains("drawer") && !e.target.closest("button, input")) setDrawer(false);
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("drawer") && $("modal").hidden) setDrawer(false); });
   if (landMQ) (landMQ.addEventListener ? landMQ.addEventListener("change", syncLayout) : landMQ.addListener(syncLayout));
