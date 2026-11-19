@@ -488,6 +488,36 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .num { cursor: pointer; }
 .num .rbc { margin-top: 2px; }
 
+/* ===== 폰 가로 화면: 왼쪽에 타이머 고정, 오른쪽은 스크롤 =====
+   (높이가 낮은 가로 화면만. 태블릿 가로는 세로와 같은 한 줄 배치) */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --tw: min(44vw, 440px); --tl: max(10px, env(safe-area-inset-left, 0px)); }
+  .wrap { max-width: 760px; padding-block: 10px 28px; }
+  .wrap.has-timer {
+    max-width: none; margin: 0;
+    padding-left: calc(var(--tl) + var(--tw) + 14px);
+  }
+  .wrap.has-timer .timer {
+    position: fixed; z-index: 5; left: var(--tl); width: var(--tw);
+    top: calc(8px + env(safe-area-inset-top, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
+    padding: 10px 12px; overflow-y: auto; overscroll-behavior: contain;
+  }
+  .wrap.has-timer .timer .blinds .k { display: none; }
+  .wrap.has-timer .timer .blinds .v { font-size: clamp(24px, 10vh, 46px); }
+  .wrap.has-timer .timer .count { font-size: clamp(50px, 22vh, 130px); }
+  .wrap.has-timer .t-adj { gap: 4px; }
+  .wrap.has-timer .t-adj button { padding: 6px 0; font-size: 12px; }
+  .wrap.has-timer .t-ctrl .btn-main, .wrap.has-timer .t-ctrl .btn-side { padding: 9px 6px; font-size: 15px; }
+  .wrap.has-timer .t-info .pill { padding: 3px 8px; font-size: 11px; }
+  .wrap.has-timer .game-row { padding-top: 6px; font-size: 12px; }
+  .wrap.has-timer .btn-end { padding: 4px 10px; }
+  .mini { display: none; }                          /* 타이머가 늘 보이니 위쪽 작은 타이머는 필요 없음 */
+  h1 { font-size: 19px; }
+  .tabs a { padding: 7px 6px; font-size: 13px; }
+  .modal .sheet { max-width: 520px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast, .mini { transition: none; }
   .timer.flash { animation: none; }
@@ -2011,6 +2041,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function renderTV() {
     $("tvLobby").hidden = !!tv.id;
     $("tvMain").hidden = !tv.id;
+    syncLayout();
     if (!tv.id) { tvLoadLobby(); return; }
     if (!tvData) { $("tvStatus").textContent = "불러오는 중…"; return; }
     const t = tvT(), S = tvS(), alive = tvAlive();
@@ -2572,7 +2603,13 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("table").parentElement.hidden = v !== "";
     if (v === "rank" && rankStale) loadRank();
     if (v === "tv") { renderTV(); tvFetch(); }
+    syncLayout();
     updateMini();
+  }
+  /* 가로 화면에서 타이머를 왼쪽에 고정할지: 타이머가 있는 화면(오늘 기록표, 진행 중인 토너먼트)일 때만 */
+  function syncLayout() {
+    const on = !$("viewSheet").hidden || (!$("viewTourney").hidden && !$("tvMain").hidden);
+    document.querySelector(".wrap").classList.toggle("has-timer", on);
   }
   window.addEventListener("hashchange", () => route());
 
