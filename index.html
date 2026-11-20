@@ -15,7 +15,7 @@
 <title>홀덤 기록표</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Oswald:wght@500;600&display=swap">
 <style>
 /* Layout: blind timer card on top, then seat blocks (seat no. | 이름 over 미션번호 | 등수 over 뽑기점수 | 당일총점). A slim bar pins the timer to the top once the card scrolls away. Single dark look on purpose (card table at night). */
 :root {
@@ -33,6 +33,7 @@
   --gold-bg: #362b14;
   --red: #f27a72;
   --font: "Noto Sans KR", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --num: "Oswald", "Noto Sans KR", system-ui, sans-serif;     /* 타이머 숫자 전용: 좁고 세로로 긴 글꼴 */
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -83,14 +84,23 @@ h1 .suit { font-size: 24px; }
   padding: 3px 11px; font-size: 13px; white-space: nowrap;
 }
 .lv-chip.brk { background: var(--gold); color: var(--gold-ink); }
-.t-next { text-align: right; min-width: 0; }
-.t-next b { color: var(--chalk); font-weight: 700; font-variant-numeric: tabular-nums; }
-.blinds { text-align: center; display: grid; gap: 0; }
-.blinds .v { font-size: clamp(32px, 11vw, 48px); font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; letter-spacing: -0.01em; }
-.blinds .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+.t-top { font-size: 15px; }
+.t-top .lv-chip { font-size: 15px; padding: 4px 12px; }
+.t-next { text-align: right; min-width: 0; border-radius: 999px; }
+.t-next b { color: var(--chalk); font-weight: 700; font-variant-numeric: tabular-nums; font-size: 17px; }
+/* 블라인드 업 30초 전: 다음 블라인드를 주황 알약으로 크게 */
+.t-next.soon { background: var(--gold); color: var(--gold-ink); padding: 4px 12px; font-weight: 700; animation: soon 1s ease-in-out infinite alternate; }
+.t-next.soon b { color: var(--gold-ink); font-size: 19px; font-weight: 900; }
+@keyframes soon { from { box-shadow: 0 0 0 0 rgba(240, 169, 59, 0.6); } to { box-shadow: 0 0 0 8px rgba(240, 169, 59, 0); } }
+.timer { grid-template-columns: minmax(0, 1fr); }      /* 긴 숫자가 칸을 밀어 넓히지 않게 */
+.blinds { text-align: center; display: grid; gap: 0; min-width: 0; }
+.blinds .v, .count { min-width: 0; overflow: hidden; }
+/* 글자 크기는 최대값. 블라인드가 길면(15,000 / 30,000) JS가 폭에 맞게 줄임 */
+.blinds .v { font-family: var(--num); font-size: min(17vw, 92px); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.02; letter-spacing: 0.01em; white-space: nowrap; }
+.blinds .k { display: none; }
 .count {
-  text-align: center; font-size: clamp(68px, 24vw, 120px); font-weight: 900; line-height: 1;
-  font-variant-numeric: tabular-nums; letter-spacing: -0.03em;
+  text-align: center; font-family: var(--num); font-size: min(33vw, 180px); font-weight: 600; line-height: 0.95;
+  font-variant-numeric: tabular-nums; letter-spacing: 0; white-space: nowrap;
 }
 .count.paused { color: var(--muted); }
 .count.warn { color: var(--gold); }
@@ -132,7 +142,7 @@ h1 .suit { font-size: 24px; }
 .mini.show { transform: none; }
 .mini .lv-chip { font-size: 12px; padding: 2px 9px; }
 .mini .mb { font-weight: 900; font-variant-numeric: tabular-nums; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mini .mc { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.mini .mc { font-family: var(--num); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .mini .mc.paused { color: var(--muted); }
 .mini .mc.warn { color: var(--gold); }
 .mini button { border: 1px solid var(--line); background: var(--well); border-radius: 9px; padding: 6px 10px; font-size: 13px; font-weight: 700; }
@@ -170,7 +180,12 @@ h1 .suit { font-size: 24px; }
 .seat input::placeholder { color: var(--faint); font-size: 14px; }
 .in-name { grid-area: name; }
 .in-mission { grid-area: mission; }
-.in-rank { grid-area: rank; }
+.rank-cell { grid-area: rank; position: relative; display: grid; }
+.bust-btn {
+  position: absolute; inset: 0; border: 1px solid #6b3532; background: var(--well); color: var(--red);
+  border-radius: 10px; font-size: 15px; font-weight: 700;
+}
+.bust-btn:active { background: #3a1d1b; }
 .in-draw { grid-area: draw; }
 .total {
   grid-area: total; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -179,8 +194,8 @@ h1 .suit { font-size: 24px; }
 .total b { font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .total b.empty { color: #4c5a54; }
 .total small { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.3; }
-.warn { grid-column: 2 / -1; font-size: 11px; color: var(--red); }
-.warn:empty { display: none; }
+.seat .warn { grid-column: 2 / -1; font-size: 11px; color: var(--red); }   /* 자리 줄의 경고 문구 (타이머의 .count.warn 과 섞이지 않게) */
+.seat .warn:empty { display: none; }
 
 /* footer */
 .rule {
@@ -516,14 +531,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     grid-template-areas: "top top" "bl bl" "ct ct" "bar bar" "ctrl adj" "game .";
     gap: 6px 12px; overflow: hidden;
   }
-  body.land #stage .t-top { grid-area: top; font-size: 15px; }
-  body.land #stage .t-top .lv-chip { font-size: 15px; padding: 4px 12px; }
-  body.land #stage .t-next b { font-size: 17px; }
+  body.land #stage .t-top { grid-area: top; }
   body.land #stage .t-info { grid-area: top; justify-self: center; align-self: center; }
   body.land #stage .blinds { grid-area: bl; }
   body.land #stage .blinds .k { display: none; }
-  body.land #stage .blinds .v { font-size: clamp(30px, 15vh, 84px); line-height: 1.05; }
-  body.land #stage .count { grid-area: ct; align-self: center; font-size: clamp(64px, 39vh, 230px); line-height: 0.95; }
+  body.land #stage .blinds .v { font-size: clamp(30px, 16vh, 96px); line-height: 1.02; }
+  body.land #stage .count { grid-area: ct; align-self: center; font-size: clamp(64px, 42vh, 260px); line-height: 0.92; }
   body.land #stage .bar { grid-area: bar; }
   body.land #stage .t-ctrl { grid-area: ctrl; }
   body.land #stage .t-adj { grid-area: adj; gap: 5px; }
@@ -568,6 +581,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
 @media (prefers-reduced-motion: reduce) {
   .toast, .mini, body.land .wrap, .count { transition: none; }
+  .t-next.soon { animation: none; }
   .timer.flash { animation: none; }
 }
 </style>
@@ -1082,6 +1096,27 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   }
 
+  /* 큰 숫자가 칸보다 넓으면(긴 블라인드, 1시간 넘는 시간) 칸에 맞게 줄임. CSS 크기가 최대값 */
+  let fitGen = 0;
+  const fitCache = new WeakMap(), fitRange = document.createRange();
+  function fitText(el) {
+    const key = `${fitGen}|${el.textContent}|${el.clientWidth}|${innerHeight}|${document.body.className}`;
+    if (fitCache.get(el) === key) return;
+    fitCache.set(el, key);
+    el.style.fontSize = "";
+    const max = parseFloat(getComputedStyle(el).fontSize), avail = el.clientWidth - 4;
+    if (!max || avail <= 0) return;
+    fitRange.selectNodeContents(el);                       // 화면에 그려진 글자 폭을 그대로 잼
+    const w = fitRange.getBoundingClientRect().width;
+    if (w > avail) el.style.fontSize = Math.floor(max * avail / w * 0.98) + "px";
+  }
+  if (document.fonts) document.fonts.addEventListener("loadingdone", () => { fitGen++; });
+  /* 다음 블라인드 표시. 30초 전부터는 '곧 300 / 600' 주황 알약 */
+  function setNext(el, next, soon) {
+    const html = next ? `${soon ? "곧" : "다음"} <b>${blindText(next)}</b>` : "마지막 레벨";
+    if (el.innerHTML !== html) el.innerHTML = html;
+    el.classList.toggle("soon", !!soon);
+  }
   function renderTimer() {
     const t = T(), cur = lv(t.idx), next = lv(t.idx + 1);
     const rem = remaining();
@@ -1090,14 +1125,17 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("t-lv").textContent = chip; $("t-lv").classList.toggle("brk", !!cur.brk);
     $("t-bk").textContent = cur.brk ? "쉬는 시간" : "스몰 / 빅 블라인드";
     $("t-bl").textContent = blindText(cur);
-    $("t-next").innerHTML = next ? `다음 <b>${blindText(next)}</b>` : "마지막 레벨";
+    const soon = t.running && !!next && rem <= 30000;
+    setNext($("t-next"), next, soon);
     const ct = $("t-ct");
     ct.textContent = clock(rem);
+    fitText($("t-bl")); fitText(ct);
     ct.classList.toggle("paused", !t.running);
     ct.classList.toggle("warn", t.running && rem <= 60000);
     $("t-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / curLen()) * 100)) + "%";
     $("t-prev").disabled = t.idx === 0;
     $("t-next-btn").disabled = t.idx >= last();
+    if (seatEls.length) updateBustBtns();
 
     /* 레벨 시간 · 리바인 상태 */
     $("t-dur").innerHTML = `레벨 시간 <b>${fmt(n0(t.dur))}분</b>`;
@@ -1491,7 +1529,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       row.innerHTML = `
         <div class="num" title="눌러서 리바인 횟수 고치기">${no}${no === DEALER_SEAT ? "<small>딜러</small>" : ""}<em class="rbc" hidden></em></div>
         <input class="in-name" id="n${i}" placeholder="이름" list="players" autocomplete="off" aria-label="${no}번 이름">
-        <input class="in-rank" id="r${i}" placeholder="등수" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="${no}번 등수">
+        <div class="rank-cell"><input class="in-rank" id="r${i}" placeholder="등수" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="${no}번 등수"><button type="button" class="bust-btn" id="b${i}" hidden>탈락</button></div>
         <input class="in-mission" id="m${i}" placeholder="미션번호" autocomplete="off" aria-label="${no}번 미션번호">
         <input class="in-draw" id="d${i}" placeholder="뽑기점수" autocomplete="off" aria-label="${no}번 뽑기점수">
         <div class="total"><b class="empty">–</b><small>총점</small></div>
@@ -1500,8 +1538,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const el = {
         name: row.querySelector("#n" + i), rank: row.querySelector("#r" + i),
         mission: row.querySelector("#m" + i), draw: row.querySelector("#d" + i),
-        total: row.querySelector(".total b"), warn: row.querySelector(".warn"), rb: row.querySelector(".num .rbc")
+        total: row.querySelector(".total b"), warn: row.querySelector(".warn"), rb: row.querySelector(".num .rbc"),
+        bust: row.querySelector(".bust-btn")
       };
+      el.bust.addEventListener("click", () => bustSeat(i));
       row.querySelector(".num").addEventListener("click", () => editRebuys(i));
       ["name", "rank", "mission", "draw"].forEach((k) => {
         el[k].value = state.seats[i][k];
@@ -1509,15 +1549,47 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
           if (k === "rank") el.rank.value = el.rank.value.replace(/[^0-9]/g, "");
           state.seats[i][k] = el[k].value;
           refresh(); saveSoon();
-          if (k === "rank" && el.rank.value) {
-            const rk = parseInt(el.rank.value, 10);
-            const goOut = () => { const eff = outEffect(rk); if (eff) { el.rank.blur(); askOut(eff, no, el.rank); } };
-            if (rebuyOpenLocal() && rk >= 2 && rk <= SEATS) { /* 1등은 탈락이 아니라 리바인을 묻지 않음 */ el.rank.blur(); askRebuy(i, rk, goOut); } else goOut();
-          }
+          if (k === "rank" && el.rank.value) onRank(i, parseInt(el.rank.value, 10));
         });
       });
       seatEls.push(el);
     }
+  }
+
+  /* 등수가 들어왔을 때(손으로 적거나 탈락 버튼): 리바인 기간이면 리바인 확인, 아니면 블라인드 업·레벨 시간 확인 */
+  function onRank(i, rk) {
+    const el = seatEls[i], no = i + 1;
+    const goOut = () => { const eff = outEffect(rk); if (eff) { el.rank.blur(); askOut(eff, no, el.rank); } checkWinner(); };
+    if (rebuyOpenLocal() && rk >= 2 && rk <= SEATS) { /* 1등은 탈락이 아니라 리바인을 묻지 않음 */ el.rank.blur(); askRebuy(i, rk, goOut); } else goOut();
+  }
+  /* 탈락 버튼: 아직 등수 없는 참가자 수 = 이번 탈락자의 등수 (8명이면 첫 탈락 8등) */
+  const playingSeats = () => state.seats.map((s, i) => ({ s, i })).filter((x) => isPlaying(x.s));
+  const unrankedSeats = () => playingSeats().filter((x) => x.s.rank === "");
+  function bustSeat(i) {
+    const left = unrankedSeats();
+    if (left.length < 2 || state.seats[i].rank !== "") return;
+    const rk = left.length;
+    state.seats[i].rank = String(rk); seatEls[i].rank.value = String(rk);
+    refresh(); save();
+    toast(`${state.seats[i].name.trim() || (i + 1) + "번 자리"} ${rk}등`);
+    onRank(i, rk);
+  }
+  /* 한 명만 남으면 자동으로 1등 */
+  function checkWinner() {
+    const left = unrankedSeats();
+    if (left.length !== 1 || playingSeats().length < 2) return;
+    const w = left[0];
+    w.s.rank = "1"; seatEls[w.i].rank.value = "1";
+    refresh(); save();
+    const name = w.s.name.trim() || `${w.i + 1}번 자리`;
+    setTimeout(() => toast(`🏆 우승 ${name}! 게임 종료를 눌러 주세요`), 400);
+  }
+  function updateBustBtns() {
+    const live = !!state.start && !state.end, left = unrankedSeats().length;
+    seatEls.forEach((el, i) => {
+      const s = state.seats[i];
+      el.bust.hidden = !(live && left >= 2 && isPlaying(s) && s.name.trim() && s.rank === "");
+    });
   }
 
   /* ---------- 리바인 (일반 기록표) ---------- */
@@ -1571,6 +1643,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const rb = s.rebuys || 0;
       el.rb.hidden = !rb; el.rb.textContent = "R" + rb;
     });
+    updateBustBtns();
     renderCloud();
   }
 
@@ -2079,9 +2152,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("tt-lv").textContent = tvLevelName(S, c.idx); $("tt-lv").classList.toggle("brk", !!cur.brk);
     $("tt-bk").textContent = cur.brk ? "쉬는 시간" : "스몰 / 빅 블라인드";
     $("tt-bl").textContent = blindText(cur);
-    $("tt-next").innerHTML = next ? `다음 <b>${blindText(next)}</b>` : "마지막 레벨";
+    setNext($("tt-next"), next, c.running && !!next && rem <= 30000);
     const ct = $("tt-ct");
     ct.textContent = clock(rem);
+    fitText($("tt-bl")); fitText(ct);
     ct.classList.toggle("paused", !c.running);
     ct.classList.toggle("warn", c.running && rem <= 60000);
     $("tt-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / tvCurLen(S, c)) * 100)) + "%";
@@ -2806,6 +2880,13 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
     });
   })();
+
+  /* ---------- 인터넷이 약해도 열리게: 한 번 연 폰은 저장해 둔 화면을 씀 (sw.js) ---------- */
+  if ("serviceWorker" in navigator && window.isSecureContext && location.protocol !== "file:") {
+    window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+  }
+  window.addEventListener("offline", () => toast("인터넷이 끊겼어요. 기록표와 타이머는 계속 쓸 수 있어요"));
+  window.addEventListener("online", () => toast("인터넷이 다시 연결됐어요"));
 
   /* ---------- boot ---------- */
   if (T().idx > last()) T().idx = last();
