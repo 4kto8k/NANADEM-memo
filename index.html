@@ -515,9 +515,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .seat-res li { overflow-wrap: anywhere; }
 .seat-res li span { display: inline-block; width: 32px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .seat-res small { color: var(--gold); font-size: 11px; }
-.tset { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tset label { min-width: 0; }
 .tset label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
-.tset input { background: var(--well); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 16px; color: var(--chalk); text-align: center; }
+.tset input { width: 100%; min-width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 16px; color: var(--chalk); text-align: center; }
 .lock-note { color: var(--gold) !important; font-weight: 700; }
 .adm-row { background: var(--well); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
 .adm-row .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
@@ -527,8 +528,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .adm-row .st.old { color: var(--gold); }
 .adm-row .meta { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .adm-row .btns { display: flex; gap: 6px; flex-wrap: wrap; }
-.adm-pw { display: flex; gap: 8px; }
-.adm-pw input { flex: 1; min-width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: 16px; color: var(--chalk); letter-spacing: 0.1em; text-align: center; }
+.adm-pw { display: flex; gap: 8px; min-width: 0; }
+.struct-body > *, .tpanel > * { min-width: 0; }   /* 아주 좁은 화면(접은 폰 280px)에서도 칸이 밖으로 안 나가게 */
+.adm-pw input { flex: 1; min-width: 0; width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font-size: 16px; color: var(--chalk); letter-spacing: 0.1em; text-align: center; }
 .host-line { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; }
 .host-line b { color: var(--chalk); }
 .host-line .btn-text { padding: 2px 0; }
@@ -1926,7 +1928,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       st.textContent = "저장한 뒤에 바뀐 내용이 있어요. 다시 저장해야 랭킹에 반영돼요.";
     }
   }
+  /* 저장 중에는 다시 눌러도 막음 (느린 인터넷에서 같은 게임이 여러 번 저장되는 것 방지) */
+  let savingNow = false;
   $("saveBtn").addEventListener("click", () => {
+    if (savingNow) { toast("저장하는 중이에요. 잠시만 기다려 주세요"); return; }
     const p = payload();
     if (!p.results.length) { toast("입력된 결과가 없어요"); return; }
     const noName = p.results.find((r) => !r.player);
@@ -1944,8 +1949,13 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       title: `${dayLabel(p.played_on)}${p.table_name ? " · " + esc(p.table_name) : ""} 결과 ${p.results.length}명`,
       body, ok: state.savedId ? "다시 저장" : "랭킹에 저장", no: "취소",
       onOk: async () => {
-        const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 결과가 랭킹에 올라가요.",
-          (pin) => sb("rpc/holdem_save_game", { p_pin: pin, p_game: p, p_game_id: state.savedId || null }));
+        if (savingNow) return;
+        savingNow = true; $("saveBtn").textContent = "저장하는 중…";
+        let res;
+        try {
+          res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 결과가 랭킹에 올라가요.",
+            (pin) => sb("rpc/holdem_save_game", { p_pin: pin, p_game: p, p_game_id: state.savedId || null }));
+        } finally { savingNow = false; renderCloud(); }
         if (!res) return;
         state.savedId = res.id; state.savedAt = Date.now(); state.savedSig = sigOf(p);
         save(); renderCloud(); rankStale = true; loadNames();
@@ -1999,9 +2009,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     rankGames = games;
     const map = new Map();
     games.forEach((g) => g.holdem_results.forEach((r) => {
-      const key = normName(r.player);
-      const p = map.get(key) || { name: key, total: 0, games: 0, wins: 0 };
+      /* 띄어쓰기는 무시하고 같은 사람으로 묶음 ("김철수", "김 철수", "김철수 " 모두 하나). 표시는 가장 많이 쓴 모양으로 */
+      const shown = normName(r.player), key = shown.replace(/\s+/g, "").toLowerCase();
+      const p = map.get(key) || { name: shown, total: 0, games: 0, wins: 0, spell: {} };
       p.total += Number(r.total) || 0; p.games++; if (r.rank === 1) p.wins++;
+      p.spell[shown] = (p.spell[shown] || 0) + 1;
+      p.name = Object.keys(p.spell).sort((x, y) => p.spell[y] - p.spell[x] || x.length - y.length)[0];
       map.set(key, p);
     }));
     rankRows = [...map.values()].sort((a, b) => b.total - a.total || b.wins - a.wins || a.name.localeCompare(b.name, "ko"));
@@ -2730,12 +2743,18 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     tvData = null; tvSeenAt = null; tvPrevIdx = null; tvPrevStatus = null; tvDraft = null;
     renderTV(); tvFetch();
   }
+  let tvCreating = false;
   $("tvCreate").addEventListener("click", async () => {
+    if (tvCreating) { toast("만드는 중이에요. 잠시만 기다려 주세요"); return; }
     const settings = { levels: JSON.parse(JSON.stringify(struct.levels)), ftSize: 8, seats: 8, startMin: startMin() };
     const clockInit = { idx: 0, running: false, endsAt: null, remain: null, levelLen: null, dur: startMin() };
     const key = newHostKey();
-    const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 새 토너먼트를 만들어요. 만든 이 폰이 방장이 돼요.",
-      (pin) => sb("rpc/holdem_t_create", { p_pin: pin, p_settings: settings, p_clock: clockInit, p_who: "방장", p_host: key }));
+    tvCreating = true;
+    let res;
+    try {
+      res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 새 토너먼트를 만들어요. 만든 이 폰이 방장이 돼요.",
+        (pin) => sb("rpc/holdem_t_create", { p_pin: pin, p_settings: settings, p_clock: clockInit, p_who: "방장", p_host: key }));
+    } finally { tvCreating = false; }
     if (res) { setHost(res.id, key, res.host_hash); toast("토너먼트를 만들었어요. 내 테이블을 고르세요"); tvJoin(res.id); }
   });
   $("tvLeave").addEventListener("click", () => { tv = {}; tvSaveLocal(); tvData = null; renderTV(); });
@@ -2919,16 +2938,23 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       live = null; saveLive(); renderLiveBtn(); dismissModal(); toast("관전 공유를 끝냈어요");
     });
   }
+  let liveStarting = false;
   $("liveBtn").addEventListener("click", () => {
     if (live) { showLive(); return; }
+    if (liveStarting) { toast("관전 링크를 만드는 중이에요"); return; }
     openModal({
       title: "플레이어와 공유",
       body: `<p>지금 게임(타이머, 블라인드, 자리별 이름·미션번호·등수·리바인·총점)을 플레이어 폰에서 실시간으로 볼 수 있게 해요.</p><p>링크와 4글자 코드가 생겨요. 이 폰이 인터넷에 연결돼 있어야 따라와요.</p>`,
       ok: "공유 시작", no: "취소",
       onOk: async () => {
+        if (liveStarting || live) return;
         const key = newHostKey();
-        const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 관전 링크를 만들어요.",
-          (pin) => sb("rpc/holdem_live_start", { p_pin: pin, p_owner: key, p_payload: livePayload() }));
+        liveStarting = true;
+        let res;
+        try {
+          res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 관전 링크를 만들어요.",
+            (pin) => sb("rpc/holdem_live_start", { p_pin: pin, p_owner: key, p_payload: livePayload() }));
+        } finally { liveStarting = false; }
         if (!res) return;
         live = { id: res.id, code: res.code, key }; saveLive(); renderLiveBtn(); showLive();
       }
