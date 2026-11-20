@@ -26,3 +26,10 @@
 - `holdem_admin(p_pw, p_action, p_args)`: 관리자 비밀번호(딜러 비밀번호와 별도, 해시만 저장, 8번 틀리면 30분 잠금)를 확인하고
   `check` · `delete` · `cleanup`(끝났거나 지난 토너먼트) · `end`(강제 종료) · `host`(방장 맡기) · `change_pw`
 - 방장 넘겨받기는 방장 본인 또는 관리자만 가능
+
+## 관전 (일반 게임)
+
+- `holdem_live`: 공유 코드, 공유한 폰의 키 해시, 게임 상태(payload), 올린 시각. 직접 읽기·쓰기 불가
+- `holdem_live_start(p_pin, p_owner, p_payload)`: 딜러 비밀번호 확인 후 4글자 코드 발급, 이틀 지난 공유 정리
+- `holdem_live_push`, `holdem_live_stop`: 공유한 폰만(키 확인)
+- `holdem_live_get(p_code)`: 누구나 코드로 읽기 + 서버 시각
