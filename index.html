@@ -2392,6 +2392,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   longPress($("tt-ct"), tvEditRem);
 
   /* ---------- 화면 그리기 ---------- */
+  /* 내용이 바뀐 곳만 다시 그림: 다른 테이블 소식으로 내 자리표가 다시 그려지다가 누른 버튼이 사라지는 일 방지 */
+  function setHTML(el, html) { if (el.__html !== html) { el.innerHTML = html; el.__html = html; } }
   function renderTV() {
     $("tvLobby").hidden = !!tv.id;
     $("tvMain").hidden = !tv.id;
@@ -2403,10 +2405,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
     /* 테이블 고르기 */
     const tables = tvData.tables;
-    $("tvTables").innerHTML = tables.map((x) => {
+    setHTML($("tvTables"), tables.map((x) => {
       const n = alive.filter((p) => p.table_no === x.no).length;
       return `<button type="button" class="tchip${tv.table === x.no ? " on" : ""}${tvFinal() && t.ft_table === x.no ? " ft" : ""}" data-pick="${x.no}">${esc(tvTableLabel(x.no, true))}<small>${n}명</small></button>`;
-    }).join("") + (t.status !== "done" ? `<button type="button" class="tchip add" id="tvAddTable">+ 테이블</button>` : "");
+    }).join("") + (t.status !== "done" ? `<button type="button" class="tchip add" id="tvAddTable">+ 테이블</button>` : ""));
     $("tvPickHint").hidden = !!tv.table;
 
     /* 전체 현황 + 밸런싱 추천 */
@@ -2420,7 +2422,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const mx = counts.reduce((a, b) => (b.n > a.n ? b : a)), mn = counts.reduce((a, b) => (b.n < a.n ? b : a));
       if (mx.n - mn.n >= 2) hint = `<div class="hint">${mx.no}번 테이블 → ${mn.no}번 테이블로 1명 이동을 추천해요 (${mx.n}명 : ${mn.n}명)<button type="button" class="mini-btn" id="tvAutoMove" data-from="${mx.no}" data-to="${mn.no}">자동 이동</button></div>`;
     }
-    $("tvStatus").innerHTML = `<div>${line}</div>${hint}`;
+    setHTML($("tvStatus"), `<div>${line}</div>${hint}`);
     $("tvHost").innerHTML = tvIsHost()
       ? `<b>내가 방장이에요.</b> 타이머와 토너 세팅은 이 폰에서만 바꿀 수 있어요.`
       : `타이머·세팅은 <b>${esc(tvHostLabel())}</b>만 바꿀 수 있어요. 방장 폰이 꺼지면 관리자가 맨 아래 '관리자' 메뉴에서 방장을 맡을 수 있어요.`;
@@ -2429,17 +2431,17 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
     /* 파이널 테이블 */
     const ftReady = !tvFinal() && t.status !== "setup" && alive.length > 1 && alive.length <= n0(S.ftSize) && tvTablesInUse().length > 1;
-    $("tvFt").innerHTML = ftReady
+    setHTML($("tvFt"), ftReady
       ? `<div class="ft-box"><b>${alive.length}명 남았어요. 파이널 테이블!</b><span>타이머는 멈춰 있어요. 자리를 뽑은 뒤 재개하세요.</span><button class="btn-save" type="button" id="tvFtBtn">파이널 테이블 자리 뽑기</button></div>`
-      : tvFinal() && t.status !== "done" ? `<div class="ft-box on"><b>파이널 테이블 진행 중</b><button class="btn-line" type="button" id="tvFtShow">자리 다시 보기</button></div>` : "";
+      : tvFinal() && t.status !== "done" ? `<div class="ft-box on"><b>파이널 테이블 진행 중</b><button class="btn-line" type="button" id="tvFtShow">자리 다시 보기</button></div>` : "");
 
     /* 시작 전: 참가자 등록과 시작 자리 뽑기 */
     $("tvSetup").hidden = t.status !== "setup";
     if (t.status === "setup") {
       const pool = alive.filter((p) => p.table_no == null);
-      $("tvPool").innerHTML = pool.length
+      setHTML($("tvPool"), pool.length
         ? pool.map((p) => `<span class="pchip">${esc(p.name)}<button type="button" data-pdel="${p.id}" aria-label="${esc(p.name)} 지우기">×</button></span>`).join("")
-        : `<span class="saved">자리 없는 참가자가 없어요.</span>`;
+        : `<span class="saved">자리 없는 참가자가 없어요.</span>`);
       $("tvRegCount").textContent = `등록 ${alive.length}명 · 테이블 ${tables.length}개 · 테이블당 ${tvSeatsOf()}자리`;
     }
 
@@ -2449,12 +2451,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
     /* 탈락 순서 */
     const busted = tvBusted().slice().reverse();
-    $("tvBusted").innerHTML = busted.length ? `<h3 class="sub">탈락 순서</h3><div class="blist">${busted.map((p) =>
-      `<div class="brow"><span class="r">${tvRankOf(p)}등</span><span class="nm">${esc(p.name)}${p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : ""}</span><button type="button" class="mini-btn" data-unbust="${p.id}">되돌리기</button></div>`).join("")}</div>` : "";
+    setHTML($("tvBusted"), busted.length ? `<h3 class="sub">탈락 순서</h3><div class="blist">${busted.map((p) =>
+      `<div class="brow"><span class="r">${tvRankOf(p)}등</span><span class="nm">${esc(p.name)}${p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : ""}</span><button type="button" class="mini-btn" data-unbust="${p.id}">되돌리기</button></div>`).join("")}</div>` : "");
 
     /* 끝: 최종 순위 */
     $("tvDone").hidden = t.status !== "done";
-    if (t.status === "done") $("tvDoneList").innerHTML = tvStandings().map((x) => `<li><b>${x.rank}등</b> ${esc(x.p.name)}${x.p.rebuys ? ` <em class="rbc">R${x.p.rebuys}</em>` : ""}</li>`).join("");
+    if (t.status === "done") setHTML($("tvDoneList"), tvStandings().map((x) => `<li><b>${x.rank}등</b> ${esc(x.p.name)}${x.p.rebuys ? ` <em class="rbc">R${x.p.rebuys}</em>` : ""}</li>`).join(""));
 
     tvRenderSettings();
     if (tvData) tvTick();
@@ -2466,10 +2468,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   }
   function tvRenderSeats() {
     const box = $("tvSeats");
-    if (!tv.table) { box.innerHTML = ""; return; }
+    if (!tv.table) { setHTML(box, ""); return; }
     const t = tvT(), no = tv.table;
     if (tvFinal() && t.ft_table !== no) {
-      box.innerHTML = `<div class="empty-note">파이널 테이블은 ${t.ft_table}번 테이블에서 진행해요.<br><button type="button" class="btn-line" data-pick="${t.ft_table}">파이널 테이블 보기</button></div>`;
+      setHTML(box, `<div class="empty-note">파이널 테이블은 ${t.ft_table}번 테이블에서 진행해요.<br><button type="button" class="btn-line" data-pick="${t.ft_table}">파이널 테이블 보기</button></div>`);
       return;
     }
     const used = tvAlive().filter((p) => p.table_no === no).map((p) => p.seat || 0);
@@ -2485,7 +2487,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
           : (t.status === "done" ? "" : `<button type="button" class="mini-btn" data-sit="${s}">앉히기</button>`)}</span>
       </div>`;
     }
-    box.innerHTML = html;
+    setHTML(box, html);
   }
 
   /* ---------- 자리·사람 동작 ---------- */
@@ -2822,7 +2824,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
              <button class="rb-tog${x.rebuy ? " on" : ""}" type="button" data-trb="${i}"${dis}>${x.rebuy ? "마감" : "·"}</button>`}
         <button class="lv-del" type="button" data-tdel="${i}"${dis || (D.levels.length < 2 ? " disabled" : "")} aria-label="삭제">×</button></div>`;
     });
-    body.innerHTML = `
+    setHTML(body, `
       ${locked ? `<p class="lock-note">${notHost ? `토너 세팅은 ${esc(tvHostLabel())}만 바꿀 수 있어요.` : t.status === "done" ? "끝난 토너먼트예요." : "타이머가 돌아가는 중에는 바꿀 수 없어요. 일시정지한 뒤에 바꿔 주세요."}</p>` : `<p>바꾼 뒤 '세팅 저장'을 누르면 모든 테이블에 반영돼요.</p>`}
       <div class="tset">
         <label>파이널 테이블 인원<input data-f="ftSize" inputmode="numeric" value="${D.ftSize}"${dis}></label>
@@ -2839,7 +2841,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       <div class="struct-tools">
         <button class="btn-line" type="button" id="tsMine"${dis}>내 폰 블라인드 구조 불러오기</button>
         <button class="btn-save" type="button" id="tsSave"${dis}>세팅 저장</button>
-      </div>`;
+      </div>`);
   }
   $("tvSetBody").addEventListener("input", (e) => {
     const inp = e.target.closest("input"); if (!inp || !tvDraft) return;
