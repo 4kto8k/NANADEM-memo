@@ -2250,6 +2250,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if ((tvClockSending || tvClockJob) && tvData && tvData.tourney.id === r.tourney.id) { r.tourney.clock = tvData.tourney.clock; r.tourney.status = tvData.tourney.status; }
     tvData = r;
     if (changed) tvOnChange();
+    else tvWatch();                                        // 바빠서 못 한 자동 정지를 다음 확인 때 다시 시도
   }
   function tvSetOnline(ok) {
     if (ok === tvOnline) return;
@@ -2274,7 +2275,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       });
       if (res) { tvMyAt = Date.now(); await tvFetch(); }
       return res;
-    } finally { tvBusy = false; }
+    } finally { tvBusy = false; setTimeout(tvWatch, 0); }
   }
   const tvAct = (action, args, label) => tvActMany([[action, args]], label);
 
