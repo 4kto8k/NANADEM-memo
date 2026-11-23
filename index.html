@@ -404,6 +404,17 @@ body.has-undo .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 @keyframes baIn { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
 .hint .mini-btn { margin-left: 6px; color: var(--green); border-color: #2f5c47; }
 
+/* 소리 설정 창 */
+.snd-all { display: flex; gap: 10px; align-items: center; font-size: 16px; font-weight: 700; padding: 4px 2px; }
+.snd-all input, .snd-row input { width: 20px; height: 20px; accent-color: var(--green); flex: none; }
+.snd-list { display: grid; gap: 6px; }
+.snd-list.off { opacity: 0.45; }
+.snd-row { display: flex; align-items: center; gap: 8px; background: var(--well); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+.snd-row label { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; }
+.snd-row label span { display: grid; gap: 1px; min-width: 0; }
+.snd-row b { font-size: 15px; }
+.snd-row small { font-size: 11px; color: var(--muted); }
+
 /* tabs + views */
 .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--rail); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
 .tabs a {
@@ -442,6 +453,7 @@ body.has-undo .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 .rk.top1 .no, .rk.top1 .pt { color: var(--gold); }
 .rk.top2 .no, .rk.top3 .no { color: var(--green); }
 .empty-note { padding: 22px 14px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.6; }
+h3.sub small { font-size: 12px; color: var(--faint); font-weight: 500; }
 h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted); }
 .games { display: grid; gap: 10px; }
 .game { background: var(--rail); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
@@ -507,6 +519,11 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .tseat .sn small { font-size: 10px; color: var(--gold); font-weight: 700; }
 .tseat .nm { font-size: 16px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
 .tseat.empty .nm { color: var(--faint); font-weight: 500; }
+/* 탈락한 사람: 자리에 이름은 남기되 어둡게 (플레이 중은 선명하게) */
+.tseat.out .nm { color: var(--faint); font-weight: 700; }
+.tseat.out .sn { opacity: 0.5; }
+.seat.out > :not(.rank-cell) { opacity: 0.45; }
+.seat.out .rank-cell { opacity: 0.8; }
 .tseat.dealer { background: var(--gold-bg); }
 .tseat .acts { display: flex; gap: 5px; }
 .mini-btn { border: 1px solid var(--line); background: var(--well); color: var(--chalk); border-radius: 9px; padding: 7px 9px; font-size: 13px; font-weight: 700; }
@@ -769,9 +786,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         <button class="btn-line" id="addBrk" type="button">휴식 추가</button>
       </div>
       <div class="struct-tools">
-        <button class="btn-line" id="soundBtn" type="button">알림 소리 켜짐</button>
-        <button class="btn-line" id="soundTest" type="button">블라인드 업 소리 듣기</button>
-        <button class="btn-line" id="bellTest" type="button">리바인 마감 소리 듣기</button>
+        <button class="btn-line" id="soundCfg" type="button">🔊 소리 설정</button>
         <button class="btn-line danger" id="structReset" type="button">기본 구조로</button>
       </div>
     </div>
@@ -813,7 +828,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       </section>
       <div class="foot">
         <span class="saved">관전 화면이에요. 딜러 폰에서 바뀐 내용이 몇 초 안에 따라와요.</span>
-        <button class="btn-line" id="wLeave" type="button">다른 코드 보기</button>
+        <div class="btns"><button class="btn-line" id="wSound" type="button">🔊 소리</button><button class="btn-line" id="wLeave" type="button">다른 코드 보기</button></div>
       </div>
     </div>
   </div>
@@ -919,7 +934,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
     <div class="foot">
       <button class="btn-line" type="button" id="tvLeave">다른 토너먼트 보기</button>
-      <button class="btn-line danger" type="button" id="tvDelete">토너먼트 지우기</button>
+      <button class="btn-line" type="button" id="tvSound">🔊 소리 설정</button>
     </div>
   </div>
   <details class="struct" id="adm">
@@ -989,6 +1004,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const B = (min = 10) => ({ brk: true, min });
   const defaultStruct = () => ({
     sound: true,
+    sndOff: {},                                // 끈 알림 소리 (levelup, bell, minute, arrive)
     startMin: 10,                              // 시작 레벨 시간(분)
     outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },        // 탈락 등수별 레벨 시간(분). 5는 5등 이하 전부
     /* 나나츄 홀드엄과 같은 블라인드 + 2,000/4,000 뒤 10분 휴식, 3,000/6,000 끝나면 리바인 마감 */
@@ -1081,8 +1097,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     o.start(t); o.stop(t + dur + 0.02);
   }
   /* 블라인드 업: 오락실 레벨업 (띠리리링 3단 상승 + 높은 음), 약 1.5초 */
-  function levelUpSound() {
-    if (!struct.sound) return;
+  /* 알림별 소리 켜짐: 전체 켜기 + 알림마다 체크. force = 소리 설정 창에서 들어보기 */
+  const soundOn = (key) => !!struct.sound && !(struct.sndOff || {})[key];
+  function levelUpSound(force) {
+    if (!force && !soundOn("levelup")) return;
     try { navigator.vibrate && navigator.vibrate([120, 60, 120, 60, 120, 60, 400]); } catch (e) {}
     if (!audio) return;
     try {
@@ -1096,8 +1114,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     } catch (e) {}
   }
   /* 리바인 마감: 복싱 종 땡! 땡! 땡! (배음이 어긋난 사인파 4개가 울리며 사라짐) */
-  function bellSound(delaySec) {
-    if (!struct.sound) return;
+  function bellSound(delaySec, force) {
+    if (!force && !soundOn("bell")) return;
     setTimeout(() => { try { navigator.vibrate && navigator.vibrate([300, 120, 300, 120, 600]); } catch (e) {} }, delaySec * 1000);
     if (!audio) return;
     try {
@@ -1115,8 +1133,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
     } catch (e) {}
   }
-  function beep(times, freq) {
-    if (!struct.sound) return;
+  function beep(times, freq, key = "minute", force) {
+    if (!force && !soundOn(key)) return;
     try { navigator.vibrate && navigator.vibrate(times === 1 ? 200 : [250, 120, 250, 120, 250]); } catch (e) {}
     if (!audio) return;
     try {
@@ -1157,11 +1175,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (t.running) t.endsAt = Date.now() + t.levelLen; else t.remain = null;
     if (t.idx > old) checkRebuy(old, t.idx);
   }
-  function gotoLevel(i) {
-    const old = T().idx;
-    setLevel(i); renderTimer(); renderStruct(); save();
-    if (T().idx > old && state.start && !state.end) bigAnnounce(lv(T().idx), levelNo(T().idx), lv(T().idx).brk ? 0 : curLen() / 60000);
-  }
+  function gotoLevel(i) { setLevel(i); renderTimer(); renderStruct(); save(); }   // 직접 넘긴 폰에는 큰 공지 없음 (관전 화면에는 뜸)
 
   /* 리바인 마감 레벨을 지나가면 공지 */
   function checkRebuy(oldIdx, newIdx) {
@@ -1602,21 +1616,36 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     renderStruct(); renderTimer(); save();
   });
   $("addBrk").addEventListener("click", () => { struct.levels.push(B(10)); renderStruct(); renderTimer(); save(); });
-  function renderSound() { $("soundBtn").textContent = struct.sound ? "알림 소리 켜짐" : "알림 소리 꺼짐"; }
-  $("soundTest").addEventListener("click", () => {
+  /* ---------- 소리 설정 창: 전체 켜기/끄기, 알림마다 사용 체크, 들어보기 ---------- */
+  const SOUNDS = [
+    ["levelup", "블라인드 업", "오락실 레벨업 · 레벨이 바뀔 때", () => levelUpSound(true)],
+    ["bell", "리바인 마감", "복싱 종 땡땡땡 · 리바인 마감 레벨이 끝날 때", () => bellSound(0, true)],
+    ["minute", "1분 전", "삑 · 레벨이 1분 남았을 때", () => beep(1, 660, "minute", true)],
+    ["arrive", "새로 온 사람", "삑삑 · 여러 테이블에서 우리 테이블로 사람이 올 때", () => beep(2, 880, "arrive", true)]
+  ];
+  function renderSound() {
+    const b = $("soundCfg"); if (!b) return;
+    b.textContent = struct.sound ? "🔊 소리 설정" : "🔇 소리 설정 (꺼짐)";
+  }
+  function openSoundCfg() {
     unlockAudio();
-    if (!struct.sound) { toast("알림 소리가 꺼져 있어요"); return; }
-    levelUpSound();
-  });
-  $("bellTest").addEventListener("click", () => {
-    unlockAudio();
-    if (!struct.sound) { toast("알림 소리가 꺼져 있어요"); return; }
-    bellSound(0);
-  });
-  $("soundBtn").addEventListener("click", () => {
-    unlockAudio(); struct.sound = !struct.sound; renderSound(); save();
-    if (struct.sound) levelUpSound();
-  });
+    struct.sndOff = struct.sndOff || {};
+    openModal({
+      title: "소리 설정",
+      body: `<label class="snd-all"><input type="checkbox" id="sndAll"${struct.sound ? " checked" : ""}> 알림 소리 켜기</label>
+        <div class="snd-list" id="sndList">${SOUNDS.map(([k, name, desc]) => `
+          <div class="snd-row"><label><input type="checkbox" data-snd="${k}"${struct.sndOff[k] ? "" : " checked"}><span><b>${name}</b><small>${desc}</small></span></label>
+          <button type="button" class="mini-btn" data-play="${k}">▶ 듣기</button></div>`).join("")}</div>
+        <p>체크한 소리만 울려요. 진동(안드로이드)도 같이 켜지고 꺼져요. 듣기는 꺼져 있어도 들려요.</p>`,
+      ok: "확인"
+    });
+    const sync = () => { $("sndList").classList.toggle("off", !struct.sound); renderSound(); save(); };
+    $("sndAll").addEventListener("change", (e) => { struct.sound = e.target.checked; sync(); });
+    $("sndList").addEventListener("change", (e) => { const c = e.target.closest("[data-snd]"); if (!c) return; struct.sndOff[c.dataset.snd] = !c.checked; sync(); });
+    $("sndList").addEventListener("click", (e) => { const b = e.target.closest("[data-play]"); if (!b) return; unlockAudio(); SOUNDS.find((x) => x[0] === b.dataset.play)[3](); });
+    sync();
+  }
+  $("soundCfg").addEventListener("click", openSoundCfg);
 
   /* ======================= score sheet ======================= */
   function drawPoints(text) {
@@ -1648,6 +1677,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         <div class="warn"></div>`;
       box.appendChild(row);
       const el = {
+        row,
         name: row.querySelector("#n" + i), rank: row.querySelector("#r" + i),
         mission: row.querySelector("#m" + i), draw: row.querySelector("#d" + i),
         total: row.querySelector(".total b"), warn: row.querySelector(".warn"), rb: row.querySelector(".num .rbc"),
@@ -1755,6 +1785,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const rb = s.rebuys || 0;
       el.rb.hidden = false; el.rb.textContent = rb ? "R" + rb : "리바인";
       el.rb.classList.toggle("zero", !rb);
+      el.row.classList.toggle("out", s.rank !== "" && s.rank !== "1");     /* 탈락한 사람은 어둡게 (1등은 그대로) */
     });
     updateBustBtns();
     renderCloud();
@@ -2215,6 +2246,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     tvOffset = r.now - (t0 + t1) / 2;
     if (!r.tourney) { toast("토너먼트가 삭제됐어요"); tv = {}; tvSaveLocal(); tvData = null; renderTV(); return; }
     const changed = !tvData || tvData.tourney.id !== r.tourney.id || r.tourney.rev !== tvData.tourney.rev;
+    // 방장이 누른 타이머 변경을 서버에 보내는 중이면, 내 화면의 타이머를 예전 서버 값으로 되돌리지 않음
+    if ((tvClockSending || tvClockJob) && tvData && tvData.tourney.id === r.tourney.id) { r.tourney.clock = tvData.tourney.clock; r.tourney.status = tvData.tourney.status; }
     tvData = r;
     if (changed) tvOnChange();
   }
@@ -2256,7 +2289,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const came = tvAlive().filter((p) => p.table_no === tv.table && prev[p.id] != null && prev[p.id] !== tv.table);
     const left = tvAlive().filter((p) => prev[p.id] === tv.table && p.table_no !== tv.table);
     if (came.length) {
-      beep(2, 880);
+      beep(2, 880, "arrive");
       showNotice(came.length === 1 ? "새로 온 사람" : `새로 온 사람 ${came.length}명`,
         `<ul class="res-list">${came.sort((a, b) => a.seat - b.seat).map((p) => `<li><b>${esc(p.name)}</b> → ${p.seat}번 자리 <span class="r">(${esc(tvTableLabel(prev[p.id]))}에서)</span></li>`).join("")}</ul>`);
     }
@@ -2265,9 +2298,15 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function tvOnChange() {
     const t = tvT();
     tvArrivals();
-    if (tvSeenAt !== null && t.last_action_at && t.last_action_at !== tvSeenAt && Date.now() - tvMyAt > 4000 && tvActive()) toast(t.last_action);
+    if (tvSeenAt !== null && t.last_action_at && t.last_action_at !== tvSeenAt && Date.now() - tvMyAt > 4000 && tvActive()) {
+      const a = t.last_action || "";
+      const timerish = /일시정지|재개|토너먼트 시작|레벨로|남은 시간|세팅|파이널|우승|토너먼트 끝|방장|깨기|테이블 추가|테이블 없앰/.test(a);
+      const mine = tv.table && tvPlayers().some((p) => p.table_no === tv.table && a.includes(p.name));
+      if (timerish || mine) toast(a);                    // 내 테이블 일과 타이머·진행 변화만 알림
+    }
     tvSeenAt = t.last_action_at || "";
     if (tvPrevStatus && tvPrevStatus !== t.status) {
+      if (t.status === "final" && t.ft_table) { tv.table = t.ft_table; tvSaveLocal(); }
       if (t.status === "final" && Date.now() - tvMyAt > 4000) tvShowFt();
       if (t.status === "done") tvShowWinner();
     }
@@ -2300,7 +2339,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (tvPrevIdx != null && c.idx !== tvPrevIdx && tvData.tourney.id === tvPrevId) {
       if (c.idx > tvPrevIdx) {
         levelUpSound(); tvFlash();
-        bigAnnounce(S.levels[c.idx], tvLevelNo(S, c.idx), S.levels[c.idx].brk ? 0 : tvCurLen(S, c) / 60000);
+        if (Date.now() > tvAnnQuietUntil) bigAnnounce(S.levels[c.idx], tvLevelNo(S, c.idx), S.levels[c.idx].brk ? 0 : tvCurLen(S, c) / 60000);
         const r = tvRebuyIdx(S);
         if (r >= 0 && tvPrevIdx <= r && c.idx > r) {
           bellSound(1.6);
@@ -2347,15 +2386,34 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     m.classList.toggle("paused", !done && t.status !== "setup" && !c.running);
     m.textContent = done ? "토너먼트 끝" : t.status === "setup" && !c.running ? "토너먼트 시작" : c.running ? "일시정지" : "재개";
   }
+  let tvClockJob = null, tvClockSending = false, tvAnnQuietUntil = 0;
   function tvClockAct(fn, label, auto) {
-    if (!tvData || tvBusy) return;
+    if (!tvData) return;
     unlockAudio();
     if (!auto && !tvIsHost()) { toast(`타이머는 ${tvHostLabel()}만 조작할 수 있어요`); return; }
     const S = tvS(), now = tvNow(), c = fn(tvEff(), S, now);
     const args = { clock: c };
     if (auto) args.auto = true;
     if (tvT().status === "setup" && c.running) args.status = "running";
-    tvAct("clock", args, label);
+    // 내 화면에는 바로 반영 (직접 누른 폰에는 큰 공지를 띄우지 않음: 연달아 누를 때 가리지 않게)
+    if (!auto) tvAnnQuietUntil = Date.now() + 2500;
+    tvData.tourney.clock = c;
+    if (args.status) tvData.tourney.status = args.status;
+    tvMyAt = Date.now();
+    renderTV();
+    // 서버에는 뒤에서. 보내는 중에 또 누르면 마지막 상태 하나로 합쳐서 보냄
+    const prev = tvClockJob, count = prev && prev.base === label ? prev.count + 1 : 1;
+    tvClockJob = { args, base: label, count, label: count > 1 ? `${label} ×${count}` : label };   // 예: '다음 레벨로 ×3'
+    tvFlushClock();
+  }
+  async function tvFlushClock() {
+    if (tvClockSending || !tvClockJob) return;
+    if (tvBusy) { setTimeout(tvFlushClock, 300); return; }
+    const job = tvClockJob; tvClockJob = null; tvClockSending = true;
+    let res = null;
+    try { res = await tvAct("clock", job.args, job.label); } finally { tvClockSending = false; }
+    if (tvClockJob) tvFlushClock();
+    else if (!res) tvFetch();                              // 실패하면 서버 상태로 되돌림
   }
   $("tt-main").addEventListener("click", () => {
     if (!tvData) return;
@@ -2393,6 +2451,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
   /* ---------- 화면 그리기 ---------- */
   /* 내용이 바뀐 곳만 다시 그림: 다른 테이블 소식으로 내 자리표가 다시 그려지다가 누른 버튼이 사라지는 일 방지 */
+  let tvBustOpen = false;
   function setHTML(el, html) { if (el.__html !== html) { el.innerHTML = html; el.__html = html; } }
   function renderTV() {
     $("tvLobby").hidden = !!tv.id;
@@ -2426,7 +2485,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("tvHost").innerHTML = tvIsHost()
       ? `<b>내가 방장이에요.</b> 타이머와 토너 세팅은 이 폰에서만 바꿀 수 있어요.`
       : `타이머·세팅은 <b>${esc(tvHostLabel())}</b>만 바꿀 수 있어요. 방장 폰이 꺼지면 관리자가 맨 아래 '관리자' 메뉴에서 방장을 맡을 수 있어요.`;
-    $("tvDelete").hidden = !tvIsHost();
+
     $("tvLast").textContent = t.last_action ? `최근: ${t.last_action}${t.last_action_at ? " · " + hhmm(new Date(t.last_action_at).getTime()) : ""}` : "";
 
     /* 파이널 테이블 */
@@ -2450,9 +2509,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("tvBreak").hidden = !(tv.table && !tvFinal() && t.status !== "done" && tvData.tables.length > 1 && alive.some((p) => p.table_no === tv.table));
 
     /* 탈락 순서 */
-    const busted = tvBusted().slice().reverse();
-    setHTML($("tvBusted"), busted.length ? `<h3 class="sub">탈락 순서</h3><div class="blist">${busted.map((p) =>
-      `<div class="brow"><span class="r">${tvRankOf(p)}등</span><span class="nm">${esc(p.name)}${p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : ""}</span><button type="button" class="mini-btn" data-unbust="${p.id}">되돌리기</button></div>`).join("")}</div>` : "");
+    const busted = tvBusted().slice().reverse(), showB = tvBustOpen ? busted : busted.slice(0, 1);
+    setHTML($("tvBusted"), busted.length ? `<h3 class="sub">탈락 순서 <small>${busted.length}명</small></h3><div class="blist">${showB.map((p) =>
+      `<div class="brow"><span class="r">${tvRankOf(p)}등</span><span class="nm">${esc(p.name)}${p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : ""}</span><button type="button" class="mini-btn" data-unbust="${p.id}">되돌리기</button></div>`).join("")}</div>${busted.length > 1 ? `<button type="button" class="btn-text" id="tvBustMore">${tvBustOpen ? "접기" : `더 보기 (${busted.length - 1}명 더)`}</button>` : ""}` : "");
 
     /* 끝: 최종 순위 */
     $("tvDone").hidden = t.status !== "done";
@@ -2477,11 +2536,13 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const used = tvAlive().filter((p) => p.table_no === no).map((p) => p.seat || 0);
     const maxSeat = Math.max(tvSeatsOf(), ...used, 0);
     let html = `<div class="tseat-head"><span>자리</span><span>${esc(tvTableLabel(no))}</span><span></span></div>`;
+    const gone = {};                                         // 자리별 마지막 탈락자 (이 테이블에서 탈락한 사람)
+    tvBusted().forEach((p) => { if (p.table_no === no && p.seat) gone[p.seat] = p; });
     for (let s = 1; s <= maxSeat; s++) {
-      const p = tvAt(no, s), dealer = !tvFinal() && s === DEALER_SEAT;
-      html += `<div class="tseat${dealer ? " dealer" : ""}${p ? "" : " empty"}">
+      const p = tvAt(no, s), dealer = !tvFinal() && s === DEALER_SEAT, ghost = !p && gone[s];
+      html += `<div class="tseat${dealer ? " dealer" : ""}${p ? "" : ghost ? " out" : " empty"}">
         <span class="sn">${s}${dealer ? "<small>딜러</small>" : ""}</span>
-        <span class="nm">${p ? esc(p.name) + (p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : "") : "빈자리"}</span>
+        <span class="nm">${p ? esc(p.name) + (p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : "") : ghost ? esc(ghost.name) : "빈자리"}</span>
         <span class="acts">${p
           ? (t.status === "done" ? "" : `<button type="button" class="mini-btn bust" data-bust="${p.id}">탈락</button><button type="button" class="mini-btn" data-move="${p.id}">이동</button><button type="button" class="mini-btn" data-more="${p.id}" aria-label="${esc(p.name)} 더보기">⋯</button>`)
           : (t.status === "done" ? "" : `<button type="button" class="mini-btn" data-sit="${s}">앉히기</button>`)}</span>
@@ -2511,6 +2572,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (g("#tvEditTable")) { tvEditTable(); return; }
     if ((b = g("#tvAutoMove"))) { tvAutoMove(Number(b.dataset.from), Number(b.dataset.to)); return; }
     if (g("#tvBreak")) { tvBreak(); return; }
+    if (g("#tvBustMore")) { tvBustOpen = !tvBustOpen; renderTV(); return; }
+    if (g("#tvSound")) { openSoundCfg(); return; }
   });
 
   function tvBust(p) {
@@ -2527,7 +2590,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         onNo: () => tvDoBust(p)
       });
     } else {
-      openModal({ title: `${esc(p.name)} 탈락`, body: `<p class="big">${rank}등으로 탈락 처리해요.</p>`, ok: "탈락", no: "취소", onOk: () => tvDoBust(p) });
+      tvDoBust(p);          // 확인 창 없이 바로. 잘못 눌렀으면 아래 '되돌리기'(10초)
     }
   }
   function tvDoBust(p) {
@@ -2625,8 +2688,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         <ul class="res-list">${list.map((x) => `<li>${esc(x.name)} → ${esc(tvTableLabel(x.table_no))} ${x.seat}번</li>`).join("")}</ul>`,
       ok: "깨기", no: "취소",
       onOk: async () => {
-        const res = await tvActMany([["assign", { list: list.map(({ id, table_no, seat }) => ({ id, table_no, seat })) }], ["table_del", { no }]], `${tvTableLabel(no)} 깨기 · ${movers.length}명 이동`);
-        if (res) { tv.table = null; tvSaveLocal(); renderTV(); toast("테이블을 깼어요. 이제 맡을 테이블을 다시 골라 주세요"); }
+        const res = await tvActMany([["assign", { list: list.map(({ id, table_no, seat }) => ({ id, table_no, seat })) }], ["table_del", { no }]], `테이블 깨기 · ${movers.length}명 이동`);
+        if (res) {
+          const dl = list.find((x) => (movers.find((m) => m.id === x.id) || {}).seat === DEALER_SEAT) || list[0];
+          tv.table = dl ? dl.table_no : null; tvSaveLocal(); renderTV();
+          toast(dl ? `테이블을 깼어요. ${dl.name}님이 옮겨 간 ${tvTableLabel(dl.table_no)}을 보여 드려요` : "테이블을 깼어요");
+        }
       }
     });
   }
@@ -2841,7 +2908,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       <div class="struct-tools">
         <button class="btn-line" type="button" id="tsMine"${dis}>내 폰 블라인드 구조 불러오기</button>
         <button class="btn-save" type="button" id="tsSave"${dis}>세팅 저장</button>
-      </div>`);
+      </div>
+      ${tvIsHost() ? `<div class="struct-tools"><button class="btn-line danger" type="button" id="tvDelete">토너먼트 지우기</button></div>` : ""}`);
   }
   $("tvSetBody").addEventListener("input", (e) => {
     const inp = e.target.closest("input"); if (!inp || !tvDraft) return;
@@ -2851,6 +2919,14 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     else { const i = +inp.closest(".lv-row").dataset.i; tvDraft.levels[i][inp.dataset.k] = inp.value; }
   });
   $("tvSetBody").addEventListener("click", (e) => {
+    const del = e.target.closest("#tvDelete");
+    if (del) {                                            // 두 번 눌러야 지움
+      if (!del.classList.contains("armed")) {
+        del.classList.add("armed"); del.textContent = "한 번 더 누르면 지워요";
+        setTimeout(() => { if (del.isConnected) { del.classList.remove("armed"); del.textContent = "토너먼트 지우기"; } }, 3000);
+      } else tvAct("delete", {}, null);
+      return;
+    }
     if (!tvDraft) return;
     const b = e.target.closest("button"); if (!b || b.disabled) return;
     const D = tvDraft;
@@ -2918,9 +2994,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (res) { setHost(res.id, key, res.host_hash); toast("토너먼트를 만들었어요. 내 테이블을 고르세요"); tvJoin(res.id); }
   });
   $("tvLeave").addEventListener("click", () => { tv = {}; tvSaveLocal(); tvData = null; renderTV(); });
-  twoTap($("tvDelete"), "토너먼트 지우기", "한 번 더 누르면 지워요", async () => {
-    await tvAct("delete", {}, null);
-  });
+
 
   /* ---------- 관리자: 방장이 정리를 안 할 때 (관리자 비밀번호는 딜러 비밀번호와 별도) ---------- */
   const ADM_KEY = "holdem-admin";
@@ -3218,6 +3292,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     location.hash = "#watch-" + code;
   });
   $("wLeave").addEventListener("click", () => { location.hash = "#watch"; });
+  $("wSound").addEventListener("click", openSoundCfg);
   setInterval(() => { if (wActive() && wCode && document.visibilityState === "visible") wFetch(); }, 2000);
   setInterval(() => { if (wActive() && wData) wRender(); }, 250);
   document.addEventListener("click", () => { if (wActive()) unlockAudio(); }, true);   // 소리는 화면을 한 번 누른 뒤부터
