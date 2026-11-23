@@ -468,6 +468,25 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .game li .r { color: var(--muted); }
 .game li .t { font-weight: 700; }
 .game .del { justify-self: end; background: none; border: 0; color: var(--red); font-size: 13px; text-decoration: underline; padding: 2px 0; }
+/* 랭킹 관리자 수정 */
+.rank-admin { display: grid; gap: 6px; justify-items: center; margin-top: 4px; }
+.rank-admin .past-note { margin: 0; font-size: 13px; color: var(--muted); }
+.rank-admin .past-note b { color: var(--chalk); }
+.adm-note { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; background: #2a2414; border: 1px solid #5a4a1f; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--muted); }
+.adm-note b { color: var(--gold); grid-column: 1; }
+.adm-note span { grid-column: 1; }
+.adm-note button { grid-column: 2; grid-row: 1 / span 2; }
+.rk.editable { cursor: pointer; }
+.rk.editable .nm { text-decoration: underline dotted; text-underline-offset: 3px; }
+.rk .ren { font-style: normal; color: var(--gold); font-size: 13px; }
+.gm-adm { display: flex; gap: 8px; justify-content: flex-end; }
+.gm-adm .btn-line { padding: 7px 14px; font-size: 13px; }
+.ge-head, .ge-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) 46px 54px 40px; gap: 6px; align-items: center; }
+.ge-head { font-size: 12px; color: var(--muted); text-align: center; }
+.ge-row input { min-width: 0; width: 100%; background: var(--well); border: 1px solid var(--line); border-radius: 8px; color: var(--chalk); font: inherit; font-size: 15px; padding: 7px 6px; text-align: center; }
+.ge-row .s { text-align: center; font-weight: 900; line-height: 1.1; }
+.ge-row .s small { display: block; font-size: 10px; color: var(--gold); font-weight: 700; }
+.ge-row .t { text-align: center; font-variant-numeric: tabular-nums; }
 
 /* pin dialog */
 .pin-in {
@@ -853,7 +872,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         <button class="btn-line" id="rankCopy" type="button">랭킹 복사</button>
       </div>
     </div>
-    <h3 class="sub">이번 달 게임 기록</h3>
+    <div id="rankAdmin" class="rank-admin"></div>
+    <h3 class="sub" id="gameHead">이번 달 게임 기록</h3>
     <div id="gameList" class="games"></div>
     <button class="btn-text" id="pinChange" type="button">딜러 비밀번호 바꾸기</button>
   </div>
@@ -1748,6 +1768,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function checkWinner() {
     const left = unrankedSeats();
     if (left.length !== 1 || playingSeats().length < 2) return;
+    if (playingSeats().some((x) => x.s.rank === "1")) return;      // 1등을 손으로 이미 적었으면 남은 사람에게 1등을 또 주지 않음
     const w = left[0];
     w.s.rank = "1"; seatEls[w.i].rank.value = "1";
     refresh(); save();
@@ -1999,7 +2020,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     seat_taken: "그 자리에 방금 다른 사람이 앉았어요. 다른 자리를 골라 주세요",
     already_out: "이미 탈락 처리된 사람이에요",
     no_tourney: "토너먼트가 지워졌어요",
-    not_host: "타이머와 토너 세팅은 방장만 바꿀 수 있어요"
+    not_host: "타이머와 토너 세팅은 방장만 바꿀 수 있어요",
+    closed_month: "지난달 기록은 닫혔어요. 고칠 게 있으면 관리자에게 부탁해 주세요"
   }[e] || "저장하지 못했어요. 다시 해 주세요");
 
   /* ---------- 비밀번호 창 ---------- */
@@ -2141,6 +2163,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const now0 = new Date();
   let rankY = now0.getFullYear(), rankM = now0.getMonth() + 1, rankStale = true, rankRows = [], rankGames = [];
   const monthLabel = () => `${rankY}년 ${rankM}월`;
+  /* 지난달은 최종 순위만 (게임 기록은 관리자 수정 때만). 기록·수정·삭제는 서버에서도 막힘 */
+  const rankPast = () => { const c = new Date(); return rankY * 12 + rankM < c.getFullYear() * 12 + c.getMonth() + 1; };
+  const rankRange = () => ({ from_day: `${rankY}-${pad(rankM)}-01`, to_day: rankM === 12 ? `${rankY + 1}-01-01` : `${rankY}-${pad(rankM + 1)}-01` });
+  let rankEdit = false;
   function shiftMonth(d) {
     rankM += d;
     if (rankM < 1) { rankM = 12; rankY--; } else if (rankM > 12) { rankM = 1; rankY++; }
@@ -2161,7 +2187,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const want = monthLabel();
     let games;
     try {
-      games = await sb(`holdem_games?select=id,played_on,table_name,created_at,holdem_results(seat,player,rank,mission,total,rebuys)` +
+      games = await sb(`holdem_games?select=id,played_on,table_name,created_at,holdem_results(id,seat,player,rank,mission,draw,total,rebuys)` +
         `&played_on=gte.${from}&played_on=lt.${to}&order=played_on.desc,created_at.desc`);
     } catch (e) {
       if (want !== monthLabel()) return;
@@ -2186,26 +2212,45 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("rankStatus").textContent = `게임 ${games.length}판 · ${rankRows.length}명 · ${hhmm(Date.now())} 기준`;
   }
   function renderRank() {
-    $("rankList").innerHTML = rankRows.length ? rankRows.map((p) => `
-      <div class="rk${p.no <= 3 ? " top" + p.no : ""}">
+    const past = rankPast(), showGames = !past || rankEdit;
+    $("rankList").innerHTML = rankRows.length ? rankRows.map((p, i) => `
+      <div class="rk${p.no <= 3 ? " top" + p.no : ""}${rankEdit ? " editable" : ""}"${rankEdit ? ` data-ren="${i}" role="button" tabindex="0"` : ""}>
         <span class="no">${p.no}</span>
-        <span class="nm">${esc(p.name)}</span>
+        <span class="nm">${esc(p.name)}${rankEdit ? ` <em class="ren">✎</em>` : ""}</span>
         <span class="gm">${p.games}게임${p.wins ? `<br>1등 ${p.wins}회` : ""}</span>
         <span class="pt">${fmt(p.total)}</span>
       </div>`).join("")
-      : `<div class="empty-note">${monthLabel()} 기록이 아직 없어요.<br>오늘 기록표에서 게임이 끝난 뒤 '결과 저장'을 누르면 여기에 쌓여요.</div>`;
+      : `<div class="empty-note">${monthLabel()} 기록이 ${past ? "없어요." : "아직 없어요.<br>오늘 기록표에서 게임이 끝난 뒤 '결과 저장'을 누르면 여기에 쌓여요."}</div>`;
+    $("rankAdmin").innerHTML = rankEdit
+      ? `<div class="adm-note"><b>관리자 수정 중</b><span>이름을 누르면 ${rankM}월 기록에서 이름을 바꾸거나 다른 이름과 합칠 수 있어요. 게임 기록은 아래에서 고치기·지우기.</span><button type="button" class="btn-line" id="rankEditDone">수정 끝</button></div>`
+      : `${past ? `<p class="past-note">지난달은 <b>최종 순위</b>만 볼 수 있어요.</p>` : ""}<button type="button" class="btn-text" id="rankEditBtn">관리자 수정</button>`;
+    $("gameHead").hidden = $("gameList").hidden = !showGames;
+    $("gameHead").textContent = past ? `${rankM}월 게임 기록` : "이번 달 게임 기록";
+    if (!showGames) { $("gameList").innerHTML = ""; return; }
     $("gameList").innerHTML = rankGames.map((g) => {
       const rs = [...g.holdem_results].sort((a, b) => (a.rank || 99) - (b.rank || 99) || (a.seat || 0) - (b.seat || 0));
       return `<div class="game">
         <div class="game-top"><b>${dayLabel(g.played_on)}${g.table_name ? " · " + esc(g.table_name) : ""}</b><span>${rs.length}명</span></div>
         <ol>${rs.map((r) => `<li><span class="r">${r.rank ? r.rank + "등" : "–"}</span><span>${esc(r.player)}${r.rebuys ? ` <em class="rbc">R${r.rebuys}</em>` : ""}${r.mission ? ` <span class="r">미션 ${esc(r.mission)}</span>` : ""}</span><span class="t">${fmt(Number(r.total))}점</span></li>`).join("")}</ol>
-        <button class="del" type="button" data-del-game="${g.id}">이 게임 기록 지우기</button>
+        ${rankEdit ? `<div class="gm-adm"><button class="btn-line" type="button" data-edit-game="${g.id}">고치기</button><button class="btn-line danger" type="button" data-del-game="${g.id}">지우기</button></div>`
+          : `<button class="del" type="button" data-del-game="${g.id}">이 게임 기록 지우기</button>`}
       </div>`;
     }).join("") || `<div class="empty-note">저장된 게임이 없어요.</div>`;
   }
   $("gameList").addEventListener("click", (e) => {
+    const eb = e.target.closest("[data-edit-game]");
+    if (eb) { const g = rankGames.find((x) => x.id === eb.dataset.editGame); if (g) openGameEdit(g); return; }
     const b = e.target.closest("[data-del-game]"); if (!b) return;
     const g = rankGames.find((x) => x.id === b.dataset.delGame); if (!g) return;
+    if (rankEdit) {
+      openModal({
+        title: "게임 기록 지우기 (관리자)",
+        body: `<p>${dayLabel(g.played_on)}${g.table_name ? " · " + esc(g.table_name) : ""} 게임(${g.holdem_results.length}명)을 지우면 랭킹 점수에서도 빠져요. 되돌릴 수 없어요.</p>`,
+        ok: "지우기", no: "취소",
+        onOk: async () => { if (await adm("game_delete", { id: g.id })) { toast("게임 기록을 지웠어요"); loadRank(); } }
+      });
+      return;
+    }
     openModal({
       title: "게임 기록 지우기",
       body: `<p>${dayLabel(g.played_on)}${g.table_name ? " · " + esc(g.table_name) : ""} 게임(${g.holdem_results.length}명)을 지우면 랭킹 점수에서도 빠져요. 되돌릴 수 없어요.</p>`,
@@ -2218,6 +2263,89 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         toast("게임 기록을 지웠어요"); loadRank();
       }
     });
+  });
+  /* ---------- 랭킹 관리자 수정 (관리자 비밀번호) ---------- */
+  $("rankAdmin").addEventListener("click", (e) => {
+    if (e.target.closest("#rankEditDone")) { rankEdit = false; renderRank(); return; }
+    if (!e.target.closest("#rankEditBtn")) return;
+    if (admOpen && admPw) { rankEdit = true; renderRank(); return; }
+    openModal({
+      title: "관리자 수정",
+      body: `<p>지난달 기록을 고치거나, 이름을 바꾸고 합치려면 관리자 비밀번호가 필요해요.</p>
+        <input id="rkPw" class="pin-in" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="관리자 비밀번호" aria-label="관리자 비밀번호">
+        <label class="remember"><input type="checkbox" id="rkRemember"> 이 폰에서 기억하기</label>`,
+      ok: "열기", no: "취소",
+      onOk: async () => {
+        const pw = ($("rkPw").value || "").trim(), remember = $("rkRemember").checked;
+        if (!pw) { toast("관리자 비밀번호를 넣어 주세요"); return; }
+        admPw = pw;
+        if (!(await adm("check"))) return;
+        admOpen = true;
+        try { remember ? localStorage.setItem(ADM_KEY, pw) : localStorage.removeItem(ADM_KEY); } catch (e2) {}
+        rankEdit = true; renderRank(); toast("관리자 수정을 열었어요");
+      }
+    });
+    setTimeout(() => $("rkPw") && $("rkPw").focus(), 50);
+  });
+  /* 이름 바꾸기·합치기: 그 달 기록 전체에서 (띄어쓰기·대소문자 무시) */
+  function openRename(p) {
+    const others = rankRows.filter((x) => x !== p).map((x) => `<option value="${esc(x.name)}"></option>`).join("");
+    openModal({
+      title: `이름 바꾸기 · 합치기`,
+      body: `<p>${rankM}월 기록에서 <b>${esc(p.name)}</b> (${p.games}게임 · ${fmt(p.total)}점)의 이름을 바꿔요.</p>
+        <p>이미 랭킹에 있는 이름을 적으면 <b>그 사람으로 합쳐져요.</b></p>
+        <input id="rnTo" class="pin-in" list="rnNames" value="${esc(p.name)}" autocomplete="off" aria-label="새 이름"><datalist id="rnNames">${others}</datalist>`,
+      ok: "바꾸기", no: "취소",
+      onOk: async () => {
+        const to = normName($("rnTo").value || "");
+        const key = (x) => x.replace(/\s+/g, "").toLowerCase();
+        if (!to) { toast("이름을 적어 주세요"); return; }
+        if (to === p.name) return;
+        const into = rankRows.find((x) => x !== p && key(x.name) === key(to));
+        const r = await adm("rename", Object.assign({ from: p.name, to }, rankRange()));
+        if (!r) return;
+        toast(into ? `${p.name} → ${into.name}로 합쳤어요 (${r.count}개 기록)` : `${p.name} → ${to}로 바꿨어요 (${r.count}개 기록)`);
+        loadRank(); loadNames();
+      }
+    });
+    setTimeout(() => { const i = $("rnTo"); if (i) { i.focus(); i.select(); } }, 50);
+  }
+  $("rankList").addEventListener("click", (e) => {
+    const r = e.target.closest("[data-ren]"); if (!r || !rankEdit) return;
+    const p = rankRows[Number(r.dataset.ren)]; if (p) openRename(p);
+  });
+  /* 게임 기록 고치기: 이름·등수·뽑기점수 → 총점은 같은 규칙으로 다시 계산 */
+  function openGameEdit(g, draft) {
+    const rows = draft || [...g.holdem_results].sort((a, b) => (a.seat || 99) - (b.seat || 99))
+      .map((r) => ({ seat: r.seat, player: r.player, rank: r.rank ? String(r.rank) : "", draw: Number(r.draw) ? String(Number(r.draw)) : "", mission: r.mission || "", rebuys: r.rebuys || 0 }));
+    const tot = (r) => score({ name: r.player || "x", rank: r.rank, mission: "", draw: r.draw }, r.seat);
+    openModal({
+      title: `${dayLabel(g.played_on)}${g.table_name ? " · " + esc(g.table_name) : ""} 고치기`,
+      body: `<div class="ge-head"><span>자리</span><span>이름</span><span>등수</span><span>뽑기</span><span>총점</span></div>
+        ${rows.map((r, i) => `<div class="ge-row" data-i="${i}"><span class="s">${r.seat || "-"}${r.seat === DEALER_SEAT ? "<small>딜러</small>" : ""}</span>
+          <input data-k="player" value="${esc(r.player)}" aria-label="이름" autocomplete="off">
+          <input data-k="rank" value="${esc(r.rank)}" inputmode="numeric" maxlength="2" aria-label="등수">
+          <input data-k="draw" value="${esc(r.draw)}" aria-label="뽑기점수" placeholder="0">
+          <b class="t">${fmt(tot(r))}</b></div>`).join("")}
+        <p>총점은 등수·딜러·뽑기점수로 다시 계산돼요.</p>`,
+      ok: "저장", no: "취소",
+      onOk: async () => {
+        const res = rows.map((r) => ({ seat: r.seat, player: normName(r.player), rank: parseInt(r.rank, 10) || null, mission: r.mission, draw: drawPoints(r.draw), total: Math.round(tot(r) * 10) / 10, rebuys: r.rebuys }));
+        const ranks = res.map((r) => r.rank).filter(Boolean);
+        if (res.some((r) => !r.player)) { toast("이름이 빈 칸이 있어요"); openGameEdit(g, rows); return; }
+        if (new Set(ranks).size !== ranks.length) { toast("등수가 겹쳐요"); openGameEdit(g, rows); return; }
+        if (await adm("game_results", { id: g.id, results: res })) { toast("게임 기록을 고쳤어요"); loadRank(); loadNames(); }
+      }
+    });
+    geEdit = { rows, tot };
+  }
+  let geEdit = null;
+  $("mBody").addEventListener("input", (e) => {
+    const row = e.target.closest(".ge-row"); if (!row || !geEdit) return;
+    const r = geEdit.rows[Number(row.dataset.i)]; if (!r) return;
+    if (e.target.dataset.k === "rank") e.target.value = e.target.value.replace(/[^0-9]/g, "");
+    r[e.target.dataset.k] = e.target.value;
+    row.querySelector(".t").textContent = fmt(geEdit.tot(r));
   });
   $("rankCopy").addEventListener("click", () => {
     if (!rankRows.length) { toast("복사할 랭킹이 없어요"); return; }
@@ -3069,7 +3197,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const ADM_KEY = "holdem-admin";
   let admPw = (() => { try { return localStorage.getItem(ADM_KEY) || ""; } catch (e) { return ""; } })();
   let admOpen = false, admRows = [];
-  const admErr = (e) => ({ wrong: "관리자 비밀번호가 틀렸어요", locked: "여러 번 틀려서 30분 동안 잠겼어요", short_admin: "새 관리자 비밀번호는 6자리 이상으로 해 주세요", network: "인터넷 연결을 확인해 주세요" }[e] || "처리하지 못했어요");
+  const admErr = (e) => ({ bad_name: "이름이 빈 칸이 있어요", no_results: "결과가 없어요", no_game: "그 게임 기록이 없어요", wrong: "관리자 비밀번호가 틀렸어요", locked: "여러 번 틀려서 30분 동안 잠겼어요", short_admin: "새 관리자 비밀번호는 6자리 이상으로 해 주세요", network: "인터넷 연결을 확인해 주세요" }[e] || "처리하지 못했어요");
   async function adm(action, args) {
     let r;
     try { r = await sb("rpc/holdem_admin", { p_pw: admPw, p_action: action, p_args: args || {} }); } catch (e) { r = { ok: false, error: "network" }; }

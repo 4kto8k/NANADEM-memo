@@ -9,6 +9,7 @@
 
 - `holdem_save_game(p_pin, p_game, p_game_id)`: 저장 / 같은 게임 다시 저장
 - `holdem_delete_game(p_pin, p_game_id)`: 게임 기록 삭제
+- `holdem_month_open(d)`: 이번 달(한국 시간) 날짜인지. 어제 날짜는 오늘 낮 12시까지 허용(월말 밤샘 게임). 저장·다시 저장·삭제는 여기서 막히면 `closed_month`
 - `holdem_change_pin(p_old, p_new)`: 비밀번호 변경 (앱의 랭킹 화면 맨 아래)
 
 비밀번호를 8번 틀리면 10분 동안 잠깁니다.
@@ -25,6 +26,7 @@
 
 - `holdem_admin(p_pw, p_action, p_args)`: 관리자 비밀번호(딜러 비밀번호와 별도, 해시만 저장, 8번 틀리면 30분 잠금)를 확인하고
   `check` · `delete` · `cleanup`(끝났거나 지난 토너먼트) · `end`(강제 종료) · `host`(방장 맡기) · `change_pw`
+  · `game_delete`(게임 기록 지우기) · `game_results`(게임 결과 고치기) · `rename`(그 달 기록에서 이름 바꾸기·합치기, from_day~to_day) — 지난달 기록도 가능
 - 방장 넘겨받기는 방장 본인 또는 관리자만 가능
 
 ## 관전 (일반 게임)
