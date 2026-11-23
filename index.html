@@ -431,6 +431,9 @@ body.has-undo .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   background: var(--chalk); color: var(--felt);
 }
 .btn-save.done { background: var(--well); color: var(--green); border: 1px solid #2f5c47; }
+.fin-acts { display: grid; gap: 8px; margin-top: 4px; }
+.fin-acts button { width: 100%; min-height: 50px; font-size: 16px; }
+.btn-line.done { color: var(--green); border-color: #2f5c47; }
 .cloud .saved { text-align: center; }
 
 /* ranking */
@@ -1710,13 +1713,38 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function bustSeat(i) {
     const left = unrankedSeats();
     if (left.length < 2 || state.seats[i].rank !== "") return;
-    const rk = left.length;
+    const rk = left.length, name = state.seats[i].name.trim() || `${i + 1}번 자리`;
+    const snap = sheetSnap();
+    hideUndo();                                                  // 앞 사람 되돌리기는 여기서 끝
     state.seats[i].rank = String(rk); seatEls[i].rank.value = String(rk);
     refresh(); save();
-    toast(`${state.seats[i].name.trim() || (i + 1) + "번 자리"} ${rk}등`);
+    toast(`${name} ${rk}등`);
     onRank(i, rk);
+    /* 리바인·블라인드 업 창까지 다 끝난 뒤 10초 되돌리기 (등수·리바인·블라인드·시간을 누르기 전으로) */
+    const token = ++bustToken;
+    afterModals(() => {
+      if (token !== bustToken) return;
+      const what = state.seats[i].rank === "" ? `${name} 리바인` : `${name} ${rk}등 탈락`;
+      showUndo(what, () => sheetRestore(snap, what));
+    });
   }
-  /* 한 명만 남으면 자동으로 1등 */
+  let bustToken = 0;
+  const sheetSnap = () => JSON.parse(JSON.stringify({ seats: state.seats.map((s) => ({ rank: s.rank, rebuys: s.rebuys || 0 })), timer: state.timer, end: state.end }));
+  function sheetRestore(snap, what) {
+    if (!$("modal").hidden && $("finEnd")) dismissModal();      // 우승 마무리 창이 떠 있으면 닫기
+    snap.seats.forEach((x, i) => { state.seats[i].rank = x.rank; state.seats[i].rebuys = x.rebuys; seatEls[i].rank.value = x.rank; });
+    state.timer = snap.timer; state.end = snap.end;
+    keepAwake(!!state.start && !state.end);
+    refresh(); renderTimer(); renderStruct(); save();
+    toast(`되돌렸어요 (${what})`);
+  }
+  /* 떠 있는 창(리바인·블라인드 업 확인 등)이 모두 닫힌 뒤 실행. 우승 마무리 창은 기다리지 않음 */
+  const modalBusy = () => !$("modal").hidden && !$("finEnd");
+  function afterModals(fn) {
+    if (!modalBusy()) { setTimeout(() => { if (!modalBusy()) fn(); else afterModals(fn); }, 80); return; }
+    setTimeout(() => afterModals(fn), 200);
+  }
+  /* 한 명만 남으면 자동으로 1등 → 마무리 창 (게임 종료 / 결과 복사 / 랭킹 저장) */
   function checkWinner() {
     const left = unrankedSeats();
     if (left.length !== 1 || playingSeats().length < 2) return;
@@ -1724,7 +1752,34 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     w.s.rank = "1"; seatEls[w.i].rank.value = "1";
     refresh(); save();
     const name = w.s.name.trim() || `${w.i + 1}번 자리`;
-    setTimeout(() => toast(`🏆 우승 ${name}! 게임 종료를 눌러 주세요`), 400);
+    afterModals(() => { if (w.s.rank === "1") openFinish(name); });
+  }
+  function openFinish(name) {
+    openModal({
+      title: `🏆 우승 ${esc(name)}`,
+      body: `<p>순서대로 눌러 마무리해 주세요.</p>
+        <div class="fin-acts">
+          <button type="button" class="btn-line" id="finEnd"></button>
+          <button type="button" class="btn-line" id="finCopy">2. 결과 복사</button>
+          <button type="button" class="btn-save" id="finSave"></button>
+        </div>`,
+      ok: "닫기"
+    });
+    const paint = () => {
+      const e = $("finEnd"), v = $("finSave"); if (!e) return;
+      e.textContent = state.end ? `✓ 게임 종료됨 · ${hhmm(state.end)}` : "1. 게임 종료";
+      e.classList.toggle("done", !!state.end);
+      const saved = state.savedId && state.savedSig === sigOf(payload());
+      v.textContent = saved ? "✓ 랭킹에 저장됨" : "3. 랭킹 저장";
+      v.classList.toggle("done", !!saved);
+    };
+    paint();
+    $("finEnd").addEventListener("click", () => { if (!state.end) $("g-endBtn").click(); paint(); });
+    $("finCopy").addEventListener("click", (e) => { $("copyBtn").click(); e.currentTarget.textContent = "✓ 결과 복사함"; e.currentTarget.classList.add("done"); });
+    $("finSave").addEventListener("click", () => {
+      if (state.savedId && state.savedSig === sigOf(payload())) return;
+      dismissModal(); $("saveBtn").click();
+    });
   }
   function updateBustBtns() {
     const live = !!state.start && !state.end, left = unrankedSeats().length;
@@ -1836,7 +1891,20 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       action();
     });
   }
-  twoTap($("resetBtn"), "전체 초기화", "한 번 더 누르면 초기화", () => {
+  /* 등수가 들어간 결과를 랭킹에 저장하지 않았으면 초기화 전에 알려 줌 */
+  function guardUnsaved(go) {
+    const p = payload();
+    const played = p.results.some((r) => r.rank);
+    if (!played || (state.savedId && state.savedSig === sigOf(p))) { go(); return; }
+    openModal({
+      title: "랭킹에 저장하지 않았어요",
+      body: `<p class="big">${state.savedId ? "저장한 뒤에 바뀐 내용이 있어요." : "이 게임 결과를 아직 랭킹에 저장하지 않았어요."}</p><p>초기화하면 이 결과는 사라져요.</p>`,
+      ok: "랭킹에 저장", no: "그래도 초기화", noAction: true,
+      onOk: () => $("saveBtn").click(),
+      onNo: go
+    });
+  }
+  twoTap($("resetBtn"), "전체 초기화", "한 번 더 누르면 초기화", () => guardUnsaved(() => {
     state = blankState();
     state.timer.dur = startMin();
     keepAwake(false);
@@ -1844,9 +1912,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     state.day = isoDay(Date.now());
     renderHeader(); buildSeats(); refresh(); renderTimer(); renderStruct();
     save(); toast("초기화했어요");
-  });
+  }));
   /* 이름·미션번호는 남기고 나머지(등수, 뽑기, 타이머, 시작·종료, 저장 상태)는 새 게임으로 */
-  twoTap($("keepBtn"), "이름·미션 남기고 초기화", "한 번 더 누르면 초기화", () => {
+  twoTap($("keepBtn"), "이름·미션 남기고 초기화", "한 번 더 누르면 초기화", () => guardUnsaved(() => {
     const keep = state.seats.map((s) => ({ name: s.name, mission: s.mission }));
     const table = state.table;
     state = blankState();
@@ -1858,7 +1926,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     state.day = isoDay(Date.now());
     renderHeader(); buildSeats(); refresh(); renderTimer(); renderStruct();
     save(); toast("이름과 미션번호만 남기고 초기화했어요");
-  });
+  }));
   twoTap($("structReset"), "기본 구조로", "한 번 더 누르면 되돌려요", () => {
     struct = defaultStruct(); T().idx = Math.min(T().idx, last());
     if (fresh()) T().levelLen = null;
@@ -2112,7 +2180,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       p.name = Object.keys(p.spell).sort((x, y) => p.spell[y] - p.spell[x] || x.length - y.length)[0];
       map.set(key, p);
     }));
-    rankRows = [...map.values()].sort((a, b) => b.total - a.total || b.wins - a.wins || a.name.localeCompare(b.name, "ko"));
+    rankRows = [...map.values()].sort((a, b) => b.total - a.total || a.games - b.games || b.wins - a.wins || a.name.localeCompare(b.name, "ko"));   // 동점이면 같은 순위, 게임 수가 적은 사람을 위에
     rankRows.forEach((p, i) => { p.no = i > 0 && Math.abs(p.total - rankRows[i - 1].total) < 1e-9 ? rankRows[i - 1].no : i + 1; });
     renderRank();
     $("rankStatus").textContent = `게임 ${games.length}판 · ${rankRows.length}명 · ${hhmm(Date.now())} 기준`;
