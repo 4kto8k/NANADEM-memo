@@ -391,6 +391,19 @@ body.watching .tabs { display: none; }
 .err-line { color: var(--red) !important; }
 .err-line:empty { display: none; }
 
+/* 새 버전 알림 (설치한 앱도 바로 업데이트) */
+.upd {
+  position: fixed; z-index: 46; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+  top: calc(10px + env(safe-area-inset-top, 0px)); max-width: 520px; margin: 0 auto;
+  background: var(--gold); color: var(--felt); border-radius: 14px; padding: 10px 10px 10px 16px;
+  display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.upd[hidden] { display: none; }
+.upd span { flex: 1; min-width: 0; }
+.upd button { border: 0; background: var(--felt); color: var(--gold); border-radius: 10px; padding: 9px 14px; font-weight: 900; font-size: 15px; white-space: nowrap; }
+.upd button.x { background: transparent; color: var(--felt); padding: 9px 6px; }
+
 /* 탈락 직후 10초 되돌리기 */
 .undo {
   position: fixed; z-index: 44; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
@@ -1002,6 +1015,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 </div>
 <div class="undo" id="undoBar" hidden role="status" aria-live="polite">
   <span id="undoTxt"></span><button type="button" id="undoBtn">되돌리기</button><i id="undoLine"></i>
+</div>
+<div class="upd" id="updBar" hidden role="status" aria-live="polite">
+  <span>새 버전이 나왔어요</span><button type="button" id="updGo">지금 적용</button><button type="button" class="x" id="updX" aria-label="나중에">✕</button>
 </div>
 <div class="bigann" id="bigAnn" hidden>
   <span class="ba-k" id="baK"></span><b class="ba-v" id="baV"></b><span class="ba-s" id="baS"></span>
@@ -3691,6 +3707,33 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   if ("serviceWorker" in navigator && window.isSecureContext && location.protocol !== "file:") {
     window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
   }
+  /* ---------- 새 버전 확인: 설치한 앱은 뒤에 켜 둔 채로 다시 열면 옛 화면 그대로라, 열 때마다 서버 것과 비교 ---------- */
+  (function () {
+    if (location.protocol === "file:") return;
+    const parts = (doc) => [...doc.querySelectorAll("style, script:not([src])")].map((x) => x.textContent).join("\u0001");
+    const hash = (t) => { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return h; };
+    const mine = parts(document);
+    let base = null, last = 0, off = false;
+    async function check() {
+      if (off || !navigator.onLine || Date.now() - last < 60000) return;
+      last = Date.now();
+      try {
+        const res = await fetch(location.pathname.replace(/[^/]*$/, "") + "index.html?v=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) return;
+        const text = await res.text();
+        if (!/<html/i.test(text)) return;
+        if (base == null) {
+          if (parts(new DOMParser().parseFromString(text, "text/html")) === mine) { base = hash(text); return; }
+        } else if (hash(text) === base) return;
+        $("updBar").hidden = false;
+      } catch (e) {}
+    }
+    $("updGo").addEventListener("click", () => location.reload());
+    $("updX").addEventListener("click", () => { off = true; $("updBar").hidden = true; });
+    setTimeout(check, 3000);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });
+    setInterval(() => { if (document.visibilityState === "visible") check(); }, 10 * 60000);
+  })();
   window.addEventListener("offline", () => toast("인터넷이 끊겼어요. 기록표와 타이머는 계속 쓸 수 있어요"));
   window.addEventListener("online", () => toast("인터넷이 다시 연결됐어요"));
 
