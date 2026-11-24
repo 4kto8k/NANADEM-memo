@@ -2813,6 +2813,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       return `<button type="button" class="tchip${tv.table === x.no ? " on" : ""}${me ? " mine" : ""}${tvFinal() && t.ft_table === x.no ? " ft" : ""}" data-pick="${x.no}">${esc(tvTableLabel(x.no, true))}<small>${n}명${own ? " · " + own : ""}</small></button>`;
     }).join("") + (t.status !== "done" ? `<button type="button" class="tchip add" id="tvAddTable">+ 테이블</button>` : ""));
     $("tvPickHint").hidden = !!tv.table;
+    $("tvPickHint").textContent = tvIsFloor() && !tvIsHost() ? "처리할 테이블을 골라 주세요. 플로어는 모든 테이블을 조작할 수 있어요."
+      : "볼 테이블을 골라 주세요. 딜러라면 테이블을 고른 뒤 '이 테이블 맡기'를 눌러요.";
 
     /* 전체 현황 + 밸런싱 추천 */
     const counts = tables.map((x) => ({ no: x.no, n: alive.filter((p) => p.table_no === x.no).length })).filter((x) => x.n > 0);
