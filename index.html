@@ -989,6 +989,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <div class="foot">
       <button class="btn-line" type="button" id="tvLeave">다른 토너먼트 보기</button>
       <button class="btn-line" type="button" id="tvInvite">🔗 딜러 초대 링크</button>
+      <button class="btn-line" type="button" id="tvFloorBtn" hidden>🧑‍⚖️ 플로어 링크</button>
       <button class="btn-line" type="button" id="tvSound">🔊 소리 설정</button>
     </div>
   </div>
@@ -2067,7 +2068,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     seat_taken: "그 자리에 방금 다른 사람이 앉았어요. 다른 자리를 골라 주세요",
     already_out: "이미 탈락 처리된 사람이에요",
     no_tourney: "토너먼트가 지워졌어요",
-    not_host: "타이머와 토너 세팅은 방장만 바꿀 수 있어요",
+    not_host: "타이머와 토너 세팅은 방장이나 플로어만 바꿀 수 있어요",
     not_owner: "다른 폰이 맡은 테이블이에요. 그 테이블 폰이나 방장 폰에서 해 주세요",
     claimed: "방금 다른 폰이 그 테이블을 맡았어요",
     no_table: "그 테이블이 없어졌어요",
@@ -2494,6 +2495,18 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const tvMyName = () => { try { return localStorage.getItem(MYNAME_KEY) || ""; } catch (e) { return ""; } };
   const tvSetMyName = (n) => { try { localStorage.setItem(MYNAME_KEY, n); } catch (e) {} };
   const tvHostKey = () => (tv.id && hostMap()[tv.id]) ? hostMap()[tv.id].key : "";
+  /* 플로어 키: 방장이 만든 플로어 링크(?f=키)를 연 폰에 저장. 서버에는 해시만. 플로어는 타이머·세팅·모든 테이블 조작 */
+  const FLOOR_KEY = "holdem-tv-floor";
+  const floorMap = () => { try { return JSON.parse(localStorage.getItem(FLOOR_KEY)) || {}; } catch (e) { return {}; } };
+  const setFloor = (id, key, hash) => { try { const m = floorMap(); m[id] = { key, hash }; localStorage.setItem(FLOOR_KEY, JSON.stringify(m)); } catch (e) {} };
+  const sha256 = (txt) => (window.crypto && crypto.subtle)
+    ? crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)).then((b) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("")).catch(() => "")
+    : Promise.resolve("");
+  const tvFloorKey = () => (tv.id && floorMap()[tv.id]) ? floorMap()[tv.id].key : "";
+  const tvIsFloor = () => !!(tvData && tv.id && floorMap()[tv.id] && floorMap()[tv.id].hash && floorMap()[tv.id].hash === tvT().floor_hash);
+  const tvFloorLabel = () => { const n = tvData && tvT().floor_name; return n ? `플로어 ${n}` : "플로어"; };
+  const tvIsBoss = () => tvIsHost() || tvIsFloor();
+  const tvBossLabel = () => tvHostLabel() + (tvData && tvT().floor_hash ? `·${tvFloorLabel()}` : "");
   const tvHostLabel = () => { const n = tvData && tvT().host_name; return n && n !== "방장" ? `방장 ${n}` : "방장"; };
   const tvIsHost = () => !!(tvData && tv.id && hostMap()[tv.id] && hostMap()[tv.id].hash === tvT().host_hash);
   let tvData = null, tvOffset = 0, tvBusy = false, tvMyAt = 0, tvSeenAt = null, tvPrevIdx = null, tvPrevStatus = null,
@@ -2544,7 +2557,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const nm = t.name || (d ? d.name : t.dealer || "");
     return `${no}번 테이블` + (nm ? (short ? ` ${nm}` : `(${nm})`) : "");
   }
-  const tvWho = () => tv.table ? tvTableLabel(tv.table) : "딜러";
+  const tvWho = () => (tvIsFloor() && !tvIsHost() && !tvMine()) ? tvFloorLabel() : tv.table ? tvTableLabel(tv.table) : "딜러";
   const tvSeatsOf = () => Math.max(2, n0(tvS().seats) || 8);
   function tvEmptySeats(no) {
     const out = [];
@@ -2554,7 +2567,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const tvTb = (no) => (tvData && tvData.tables.find((x) => x.no === no)) || null;
   const tvMine = () => { const x = dev.hash && tvData && tvData.tables.find((y) => y.owner_hash === dev.hash); return x ? x.no : null; };
   const tvOwnedByOther = (no) => { const x = tvTb(no); return !!(x && x.owner_hash && x.owner_hash !== dev.hash); };
-  const tvCanOp = (no) => tvIsHost() || !tvOwnedByOther(no);
+  const tvCanOp = (no) => tvIsBoss() || !tvOwnedByOther(no);
   const tvOwnerName = (no) => { const x = tvTb(no); return (x && (x.owner_name || x.dealer)) || "다른"; };
   const tvTablesInUse = (exceptId) => [...new Set(tvAlive().filter((p) => p.id !== exceptId && p.table_no != null).map((p) => p.table_no))];
 
@@ -2592,6 +2605,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
           const a = Object.assign({}, steps[k][1] || {});
           if (tvHostKey()) a.host = tvHostKey();
           a.device = dev.key;
+          if (tvFloorKey()) a.floor = tvFloorKey();
           if (label && k === steps.length - 1) a.label = label;
           r = await sb("rpc/holdem_t_do", { p_pin: pin, p_id: tv.id, p_action: steps[k][0], p_args: a, p_who: tvWho() });
           if (!r.ok) return r;
@@ -2705,7 +2719,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       rb.className = "pill " + (c.idx < r ? "rb-open" : c.idx === r ? "rb-last" : "rb-closed");
       rb.textContent = c.idx < r ? `리바인 가능 · ${blindText(S.levels[r])}까지` : c.idx === r ? "이번 레벨 끝나면 리바인 마감" : "리바인 마감";
     }
-    const done = t.status === "done", host = tvIsHost();
+    const done = t.status === "done", host = tvIsBoss();
     $("tt-prev").disabled = !host || done || c.idx === 0;
     $("tt-nextbtn").disabled = !host || done || c.idx >= S.levels.length - 1;
     $("tt-adj").querySelectorAll("button").forEach((b) => { b.disabled = !host || done; });
@@ -2719,7 +2733,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function tvClockAct(fn, label, auto) {
     if (!tvData) return;
     unlockAudio();
-    if (!auto && !tvIsHost()) { toast(`타이머는 ${tvHostLabel()}만 조작할 수 있어요`); return; }
+    if (!auto && !tvIsBoss()) { toast(`타이머는 ${tvBossLabel()}만 조작할 수 있어요`); return; }
     const S = tvS(), now = tvNow(), c = fn(tvEff(), S, now);
     const args = { clock: c };
     if (auto) args.auto = true;
@@ -2760,7 +2774,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
   function tvEditRem() {
     if (!tvData) return;
-    if (!tvIsHost()) { toast(`타이머는 ${tvHostLabel()}만 조작할 수 있어요`); return; }
+    if (!tvIsBoss()) { toast(`타이머는 ${tvBossLabel()}만 조작할 수 있어요`); return; }
     const S = tvS(), c = tvEff(), rem = Math.max(0, Math.ceil(tvRem(S, c, tvNow()) / 1000));
     openModal({
       title: "남은 시간 바꾸기 (모든 테이블)",
@@ -2815,17 +2829,21 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const ownLine = t.status === "setup" ? `<div class="own-line">담당 폰 ${tables.filter((x) => x.owner_hash).length}/${tables.length} 테이블 · ${tables.map((x) => x.owner_hash
       ? `<span class="ok">${x.no}번 ✓ ${esc(x.owner_name || "")}</span>` : `<span>${x.no}번 아직</span>`).join(" · ")}</div>` : "";
     setHTML($("tvStatus"), `<div>${line}</div>${ownLine}${hint}`);
+    const fl = t.floor_hash ? (t.floor_name ? `<b>${esc(tvFloorLabel())}</b>` : "플로어(아직 안 들어옴)") : "";
     $("tvHost").innerHTML = tvIsHost()
-      ? `<b>내가 방장이에요.</b> 타이머와 토너 세팅은 이 폰에서만 바꿀 수 있어요.`
-      : `타이머·세팅은 <b>${esc(tvHostLabel())}</b>만 바꿀 수 있어요. 방장 폰이 꺼지면 관리자가 맨 아래 '관리자' 메뉴에서 방장을 맡을 수 있어요.`;
+      ? `<b>내가 방장이에요.</b> 타이머와 토너 세팅은 이 폰${fl ? `과 ${fl}에서` : "에서만"} 바꿀 수 있어요.${fl ? "" : " 맨 아래 '🧑‍⚖️ 플로어 링크'로 전체 진행을 맡을 플로어를 부를 수 있어요."}`
+      : tvIsFloor()
+      ? `<b>내가 플로어예요.</b> 타이머·세팅과 모든 테이블을 조작할 수 있어요.`
+      : `타이머·세팅은 <b>${esc(tvHostLabel())}</b>${fl ? `·${fl}` : ""}만 바꿀 수 있어요. 방장 폰이 꺼지면 관리자가 맨 아래 '관리자' 메뉴에서 방장을 맡을 수 있어요.`;
+    $("tvFloorBtn").hidden = !tvIsHost() || t.status === "done";
 
     $("tvLast").textContent = t.last_action ? `최근: ${t.last_action}${t.last_action_at ? " · " + hhmm(new Date(t.last_action_at).getTime()) : ""}` : "";
 
     /* 파이널 테이블 */
     const ftReady = !tvFinal() && t.status !== "setup" && alive.length > 1 && alive.length <= n0(S.ftSize) && tvTablesInUse().length > 1;
     setHTML($("tvFt"), ftReady
-      ? `<div class="ft-box"><b>${alive.length}명 남았어요. 파이널 테이블!</b><span>타이머는 멈춰 있어요. 자리를 뽑은 뒤 재개하세요.</span>${tvIsHost() || !tables.some((x) => tvOwnedByOther(x.no))
-        ? `<button class="btn-save" type="button" id="tvFtBtn">파이널 테이블 자리 뽑기</button>` : `<span>${esc(tvHostLabel())} 폰에서 자리를 뽑아요.</span>`}</div>`
+      ? `<div class="ft-box"><b>${alive.length}명 남았어요. 파이널 테이블!</b><span>타이머는 멈춰 있어요. 자리를 뽑은 뒤 재개하세요.</span>${tvIsBoss() || !tables.some((x) => tvOwnedByOther(x.no))
+        ? `<button class="btn-save" type="button" id="tvFtBtn">파이널 테이블 자리 뽑기</button>` : `<span>${esc(tvBossLabel())} 폰에서 자리를 뽑아요.</span>`}</div>`
       : tvFinal() && t.status !== "done" ? `<div class="ft-box on"><b>파이널 테이블 진행 중</b><button class="btn-line" type="button" id="tvFtShow">자리 다시 보기</button></div>` : "");
 
     /* 시작 전: 참가자 등록과 시작 자리 뽑기 */
@@ -2894,7 +2912,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (no && tvTb(no) && t.status !== "done" && !(tvFinal() && t.ft_table !== no)) {
       const x = tvTb(no);
       if (!x.owner_hash) html = `<div class="own-note"><span><b>${no}번 테이블</b>은 맡은 폰이 없어요.</span><button type="button" class="mini-btn" id="tvClaim">이 테이블 맡기</button></div>`;
-      else if (tvOwnedByOther(no)) html = `<div class="own-note"><span>📱 <b>${esc(tvOwnerName(no))}</b> 폰이 맡은 테이블이에요. ${tvIsHost() ? "방장이라 조작할 수 있어요." : "보기만 할 수 있어요."}</span>${tvIsHost() ? `<button type="button" class="mini-btn" id="tvRelease">담당 풀기</button>` : ""}</div>`;
+      else if (tvOwnedByOther(no)) html = `<div class="own-note"><span>📱 <b>${esc(tvOwnerName(no))}</b> 폰이 맡은 테이블이에요. ${tvIsBoss() ? `${tvIsHost() ? "방장이라" : "플로어라"} 조작할 수 있어요.` : "보기만 할 수 있어요."}</span>${tvIsBoss() ? `<button type="button" class="mini-btn" id="tvRelease">담당 풀기</button>` : ""}</div>`;
     }
     setHTML($("tvOwn"), html);
   }
@@ -2947,10 +2965,28 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       if (tvOwnedByOther(pick.no)) return tvAutoClaim(name, tries + 1);
     }
   }
-  let tvJoinAsk = false;
+  let tvJoinAsk = false, tvJoinFloor = false;
   async function tvAskJoin() {
     await devReady;
     if (!tvData) return;
+    if (tvJoinFloor) {
+      tvJoinFloor = false;
+      const m = floorMap()[tv.id];
+      if (m && !m.hash) { m.hash = await sha256(m.key); setFloor(tv.id, m.key, m.hash); }
+      if (tvIsFloor()) {
+        renderTV();
+        openModal({
+          title: "플로어로 들어왔어요",
+          body: `<p>이 폰에서 <b>타이머·토너 세팅과 모든 테이블</b>을 조작할 수 있어요. 딜러들 테이블도 대신 처리할 수 있어요.</p>
+            <div class="form2"><label>내 이름<input id="flName" list="players" autocomplete="off" value="${esc(tvT().floor_name || tvMyName())}"></label></div>`,
+          ok: "확인", no: "나중에",
+          onOk: () => { const n = normName($("flName").value); if (n && n !== tvT().floor_name) { tvSetMyName(n); tvAct("floor_name", { name: n }, `${n} 플로어로 들어옴`); } }
+        });
+        return;
+      }
+      toast("이 플로어 링크는 바뀌었어요. 방장에게 새 링크를 받아 주세요");
+    }
+    if (tvIsFloor() && !tvIsHost()) return;                 // 플로어는 테이블을 맡지 않음
     const my = tvMine();
     if (my) { tv.table = my; tvSaveLocal(); renderTV(); return; }
     if (tvT().status === "done") return;
@@ -2965,6 +3001,39 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         if (!n) { toast("이름을 적어 주세요"); setTimeout(tvAskJoin, 50); return; }
         tvAutoClaim(n);
       }
+    });
+  }
+  /* 플로어 링크: 방장만. 새로 만들면 예전 플로어는 더 조작할 수 없음 */
+  async function tvFloorInvite(renew) {
+    if (!tv.id || !tvIsHost()) return;
+    const t = tvT(), cur = floorMap()[tv.id];
+    const copy = (key) => {
+      const url = location.origin + location.pathname + "?t=" + tv.id + "&f=" + key + "#tourney";
+      const text = `[나나덤 토너먼트 · 플로어용]\n플로어 한 명만 여세요. 타이머와 모든 테이블을 조작할 수 있어요.\n${url}`;
+      const fallback = () => showNotice("플로어 링크", `<p>아래 글을 길게 눌러 복사해서 플로어에게만 보내 주세요.</p><textarea readonly style="width:100%;min-height:120px">${esc(text)}</textarea>`);
+      try { navigator.clipboard.writeText(text).then(() => toast("플로어 링크를 복사했어요. 플로어에게만 보내 주세요"), fallback); } catch (e) { fallback(); }
+    };
+    if (!renew && t.floor_hash) {
+      const have = cur && cur.hash === t.floor_hash;
+      openModal({
+        title: "플로어 링크",
+        body: `<p>지금 플로어: <b>${esc(t.floor_name || "아직 안 들어옴")}</b></p><p>${have ? "같은 링크를 다시 복사하거나, " : ""}새 링크를 만들 수 있어요. 새 링크를 만들면 <b>지금 플로어는 더 조작할 수 없어요.</b></p>`,
+        ok: have ? "같은 링크 복사" : "새 링크 만들기", no: have ? "새 링크 만들기" : "취소", noAction: have,
+        onOk: () => { if (have) copy(cur.key); else setTimeout(() => tvFloorInvite(true), 50); },
+        onNo: () => { if (have) setTimeout(() => tvFloorInvite(true), 50); }
+      });
+      return;
+    }
+    const key = newHostKey(), hash = await sha256(key);
+    const res = await tvAct("floor_set", { new_floor: key }, "플로어 링크 만듦");
+    if (!res) return;
+    setFloor(tv.id, key, hash);
+    // 복사는 버튼을 누른 그 순간에 해야 폰(특히 아이폰)에서 막히지 않음
+    openModal({
+      title: "플로어 링크를 만들었어요",
+      body: `<p>플로어 <b>한 명에게만</b> 보내 주세요. 이 링크를 연 폰은 타이머·세팅과 모든 테이블을 조작할 수 있어요.</p><p>바꾸고 싶으면 다시 '🧑‍⚖️ 플로어 링크' → 새 링크 만들기.</p>`,
+      ok: "링크 복사", no: "닫기",
+      onOk: () => copy(key)
     });
   }
   function tvInvite() {
@@ -2999,6 +3068,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (g("#tvBustMore")) { tvBustOpen = !tvBustOpen; renderTV(); return; }
     if (g("#tvSound")) { openSoundCfg(); return; }
     if (g("#tvInvite")) { tvInvite(); return; }
+    if (g("#tvFloorBtn")) { tvFloorInvite(false); return; }
     if (g("#tvClaim")) { tvClaim(tv.table); return; }
     if (g("#tvRelease")) {
       const no = tv.table;
@@ -3316,7 +3386,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (!tvData) return;
     const body = $("tvSetBody");
     if (opt !== "keep" && body.contains(document.activeElement) && tvDraft) return;
-    const t = tvT(), running = tvEff().running, notHost = !tvIsHost(), locked = notHost || running || t.status === "done";
+    const t = tvT(), running = tvEff().running, notHost = !tvIsBoss(), locked = notHost || running || t.status === "done";
     if (opt === "reset" || !tvDraft || (!tvDraftDirty && tvDraftRev !== t.rev)) { tvDraft = tvDraftFrom(); tvDraftRev = t.rev; tvDraftDirty = false; }
     const D = tvDraft, dis = locked ? " disabled" : "";
     let rows = `<div class="lv-row head"><span>레벨</span><span>스몰</span><span></span><span>빅</span><span>리바인</span><span></span></div>`;
@@ -3329,7 +3399,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         <button class="lv-del" type="button" data-tdel="${i}"${dis || (D.levels.length < 2 ? " disabled" : "")} aria-label="삭제">×</button></div>`;
     });
     setHTML(body, `
-      ${locked ? `<p class="lock-note">${notHost ? `토너 세팅은 ${esc(tvHostLabel())}만 바꿀 수 있어요.` : t.status === "done" ? "끝난 토너먼트예요." : "타이머가 돌아가는 중에는 바꿀 수 없어요. 일시정지한 뒤에 바꿔 주세요."}</p>` : `<p>바꾼 뒤 '세팅 저장'을 누르면 모든 테이블에 반영돼요.</p>`}
+      ${locked ? `<p class="lock-note">${notHost ? `토너 세팅은 ${esc(tvBossLabel())}만 바꿀 수 있어요.` : t.status === "done" ? "끝난 토너먼트예요." : "타이머가 돌아가는 중에는 바꿀 수 없어요. 일시정지한 뒤에 바꿔 주세요."}</p>` : `<p>바꾼 뒤 '세팅 저장'을 누르면 모든 테이블에 반영돼요.</p>`}
       <div class="tset">
         <label>파이널 테이블 인원<input data-f="ftSize" inputmode="numeric" value="${D.ftSize}"${dis}></label>
         <label>테이블당 자리<input data-f="seats" inputmode="numeric" value="${D.seats}"${dis}></label>
@@ -3912,8 +3982,11 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   (function () {
     const m = /[?&]t=([0-9a-f-]{36})/i.exec(location.search);
     if (!m) return;
+    const f = /[?&]f=([0-9a-f]{16,})/i.exec(location.search);
     try { history.replaceState(null, "", location.pathname + "#tourney"); } catch (e) { location.hash = "#tourney"; }
+    if (f) { const old = floorMap()[m[1]]; if (!old || old.key !== f[1]) setFloor(m[1], f[1], ""); }
     if (tv.id !== m[1]) tvJoin(m[1], true); else tvJoinAsk = true;
+    if (f) tvJoinFloor = true;
   })();
   route();
   loadNames();

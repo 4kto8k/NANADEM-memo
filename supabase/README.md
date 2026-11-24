@@ -21,6 +21,7 @@
 - `holdem_tplayers`: 참가자 (테이블, 자리, 리바인 횟수, 탈락 순서 `bust_seq`). 등수는 탈락 순서로 계산
 - `holdem_t_state(p_id)`: 전체 상태 + 서버 시각(폰마다 시계 차이 보정)
 - `holdem_t_create`, `holdem_t_do`: 딜러 비밀번호를 확인하고 변경. 타이머·세팅·삭제는 방장 키(만든 폰에만 저장, 서버에는 해시만)도 확인. 방장 아닌 폰은 탈락 처리에 딸린 자동 정지만 가능
+- 플로어: `holdem_tourneys.floor_hash`(플로어 키의 해시)·`floor_name`. 방장이 `floor_set`(새 키, 예전 키는 무효. 키가 비면 플로어 없앰), 플로어나 방장이 `floor_name`. 플로어 키(`p_args.floor`)가 맞으면 방장처럼 타이머·세팅·모든 테이블 조작 가능. `delete`·`host_name`·`host_take`·`floor_set`은 방장만
 - 테이블 담당: `claim`(이 폰이 테이블을 맡음, 이름이 있으면 딜러로. 이 폰이 맡던 다른 테이블은 놓음), `release`(담당 풀기: 방장 또는 담당 폰). 방장이 아니면 다른 폰이 맡은 테이블의 사람·테이블을 바꾸는 동작(bust·player_set·player_del·unbust·player_add·assign·table·table_del)은 `not_owner`. 검사는 `holdem_t_tbl_ok(토너먼트, 테이블, 폰 해시)`
 
 ## 관리자
