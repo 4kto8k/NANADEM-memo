@@ -294,6 +294,8 @@ details.struct[open] summary::after { content: "접기"; }
 .out-rule { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; text-align: center; margin-top: 8px; }
 .out-rule label { display: grid; gap: 4px; font-size: 11px; color: var(--muted); line-height: 1.2; }
 .out-rule label.first { color: var(--green); }
+.out-rule.six { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.out-rule.six .six-k { grid-column: span 3; align-self: end; text-align: right; padding: 0 6px 12px 0; font-size: 12px; font-weight: 700; color: var(--muted); }
 .out-rule input {
   width: 100%; min-width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 8px;
   padding: 7px 2px; font-size: 16px; font-weight: 700; text-align: center; color: var(--chalk); font-variant-numeric: tabular-nums; outline: 0;
@@ -820,13 +822,18 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <summary>블라인드 구조</summary>
     <div class="struct-body">
       <div>
-        <p>레벨 시간(분)이에요. 시작 시간으로 출발해서, 탈락이 나오면 그 칸의 시간으로 줄어요. 인원(6~8명)과 상관없이 <b>몇 번째 탈락인지</b>로 정해요. 첫 탈락 때만 블라인드가 바로 한 단계 올라가요.</p>
+        <p>레벨 시간(분)이에요. 시작 시간으로 출발해서, 탈락이 나오면 그 칸의 시간으로 줄어요. <b>몇 번째 탈락인지</b>로 정해요. 윗줄은 <b>7~8명</b>, 아랫줄은 <b>6명 이하</b> 게임에 써요. 첫 탈락 때만 블라인드가 바로 한 단계 올라가요.</p>
         <div class="out-rule" id="durSet">
           <label class="first">시작<input id="durStart" data-d="start" inputmode="decimal" aria-label="시작 레벨 시간(분)"></label>
           <label>첫 탈락<input id="dur8" data-d="8" inputmode="decimal" aria-label="첫 탈락 뒤 레벨 시간(분)"></label>
           <label>2번째 탈락<input id="dur7" data-d="7" inputmode="decimal" aria-label="2번째 탈락 뒤 레벨 시간(분)"></label>
           <label>3번째 탈락<input id="dur6" data-d="6" inputmode="decimal" aria-label="3번째 탈락 뒤 레벨 시간(분)"></label>
           <label>4번째부터<input id="dur5" data-d="5" inputmode="decimal" aria-label="4번째 탈락부터 레벨 시간(분)"></label>
+        </div>
+        <div class="out-rule six" id="durSet6">
+          <span class="six-k">6명 이하</span>
+          <label>첫 탈락<input id="dur6a" data-d="s1" inputmode="decimal" aria-label="6명 게임 첫 탈락 뒤 레벨 시간(분)"></label>
+          <label>2번째부터<input id="dur6b" data-d="s2" inputmode="decimal" aria-label="6명 게임 2번째 탈락부터 레벨 시간(분)"></label>
         </div>
         <p class="out-note">여기서 바꾼 값은 다음 게임부터 기본값이 돼요. 진행 중인 게임의 레벨 시간은 아래 '지금 레벨 시간'으로 바꿔요.</p>
       </div>
@@ -1068,7 +1075,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     sound: true,
     sndOff: {},                                // 끈 알림 소리 (levelup, bell, minute, arrive)
     startMin: 10,                              // 시작 레벨 시간(분)
-    outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },        // 탈락 순서별 레벨 시간(분). 8=첫 탈락, 7=2번째, 6=3번째, 5=4번째부터
+    outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },
+    outMin6: { 1: 6, 2: 5 },                     // 6명 이하 게임: 첫 탈락 6분, 2번째부터 5분        // 탈락 순서별 레벨 시간(분). 8=첫 탈락, 7=2번째, 6=3번째, 5=4번째부터
     /* 나나츄 홀드엄과 같은 블라인드 + 2,000/4,000 뒤 10분 휴식, 3,000/6,000 끝나면 리바인 마감 */
     levels: [L(100, 200), L(200, 400), L(300, 600), L(400, 800), L(600, 1200),
              L(800, 1600), L(1000, 2000), L(1500, 3000), L(2000, 4000), B(10),
@@ -1085,10 +1093,16 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   let struct = load(STRUCT_KEY, defaultStruct);
   if (!Array.isArray(struct.levels) || !struct.levels.length) struct = defaultStruct();
   struct.outMin = Object.assign(defaultStruct().outMin, struct.outMin || {});
+  struct.outMin6 = Object.assign(defaultStruct().outMin6, struct.outMin6 || {});
   const startMin = () => n0(struct.startMin) > 0 ? n0(struct.startMin) : 10;
   /* 등수 → 몇 번째 탈락인지 (참가 인원 기준: 6명 게임의 6등 = 첫 탈락) */
   const outOrder = (rank) => Math.max(1, state.seats.filter((x) => isPlaying(x)).length - rank + 1);
-  const outMinFor = (rank) => { const k = outOrder(rank); return n0(struct.outMin[k === 1 ? 8 : k === 2 ? 7 : k === 3 ? 6 : 5]); };
+  const playingCount = () => state.seats.filter((x) => isPlaying(x)).length;
+  const outMinFor = (rank) => {
+    const k = outOrder(rank);
+    if (playingCount() <= 6) return n0(struct.outMin6[k === 1 ? 1 : 2]);          // 6명 이하: 첫 탈락 / 2번째부터
+    return n0(struct.outMin[k === 1 ? 8 : k === 2 ? 7 : k === 3 ? 6 : 5]);        // 7~8명
+  };
 
   let saveTimer;
   function save() {
@@ -1474,12 +1488,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
   /* ---------- 레벨 시간 기본값(시작·탈락별) ---------- */
   function renderDurSet() {
-    const vals = { start: startMin(), 8: struct.outMin[8], 7: struct.outMin[7], 6: struct.outMin[6], 5: struct.outMin[5] };
-    $("durSet").querySelectorAll("input").forEach((inp) => {
+    const vals = { start: startMin(), 8: struct.outMin[8], 7: struct.outMin[7], 6: struct.outMin[6], 5: struct.outMin[5], s1: struct.outMin6[1], s2: struct.outMin6[2] };
+    document.querySelectorAll("#durSet input, #durSet6 input").forEach((inp) => {
       if (document.activeElement !== inp) { inp.value = fmt(n0(vals[inp.dataset.d])); inp.classList.remove("bad"); }
     });
   }
-  $("durSet").addEventListener("input", (e) => {
+  const durInput = (e) => {
     const inp = e.target.closest("input"); if (!inp) return;
     inp.value = inp.value.replace(/[^0-9.]/g, "");
     const v = n0(inp.value), ok = v > 0;
@@ -1488,12 +1502,17 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (inp.dataset.d === "start") {
       struct.startMin = v;
       if (!state.start) setDuration(v);          // 게임 시작 전이면 지금 타이머에도 바로 적용
+    } else if (inp.dataset.d[0] === "s") {
+      struct.outMin6[inp.dataset.d.slice(1)] = v;
     } else {
       struct.outMin[inp.dataset.d] = v;
     }
     renderTimer(); saveSoon();
+  };
+  ["durSet", "durSet6"].forEach((id) => {
+    $(id).addEventListener("input", durInput);
+    $(id).addEventListener("focusout", () => setTimeout(renderDurSet, 0));
   });
-  $("durSet").addEventListener("focusout", () => setTimeout(renderDurSet, 0));
 
   /* ---------- 탈락 등수 입력 → 블라인드 업 / 레벨 시간 단축 ---------- */
   function outEffect(rank) {
