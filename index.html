@@ -405,6 +405,8 @@ body.watching .tabs { display: none; }
 .upd button.x { background: transparent; color: var(--felt); padding: 9px 6px; }
 
 /* 탈락 직후 10초 되돌리기 */
+.seat-draw { width: 100%; }
+.seat-draw small { font-weight: 500; color: var(--muted); }
 .undo {
   position: fixed; z-index: 44; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
   bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: 520px; margin: 0 auto;
@@ -788,6 +790,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     </div>
     <div id="seats"></div>
   </section>
+  <button class="btn-line seat-draw" id="seatDraw" type="button" hidden>🎲 자리 랜덤 뽑기 <small>(4번 딜러는 그대로)</small></button>
 
   <div class="rule">
     <b>당일총점</b> = 참가 기본 1점 + 등수 보너스(1등 +4, 2등 +2, 3·4등 +1) + 딜러(4번 자리) +0.5 + 뽑기점수
@@ -803,7 +806,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <span class="saved" id="saved">입력하면 이 폰에 자동 저장돼요</span>
     <div class="btns">
       <button class="btn-line" id="copyBtn" type="button">결과 복사</button>
-      <button class="btn-line danger" id="keepBtn" type="button">이름·미션 남기고 초기화</button>
+      <button class="btn-line danger" id="keepBtn" type="button">같은 멤버로 새 게임</button>
       <button class="btn-line danger" id="resetBtn" type="button">전체 초기화</button>
     </div>
   </div>
@@ -817,13 +820,13 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <summary>블라인드 구조</summary>
     <div class="struct-body">
       <div>
-        <p>레벨 시간(분)이에요. 시작 시간으로 출발해서, 탈락자 등수를 입력하면 그 칸의 시간으로 줄어요. 8등 탈락 때만 블라인드가 바로 한 단계 올라가요.</p>
+        <p>레벨 시간(분)이에요. 시작 시간으로 출발해서, 탈락이 나오면 그 칸의 시간으로 줄어요. 인원(6~8명)과 상관없이 <b>몇 번째 탈락인지</b>로 정해요. 첫 탈락 때만 블라인드가 바로 한 단계 올라가요.</p>
         <div class="out-rule" id="durSet">
           <label class="first">시작<input id="durStart" data-d="start" inputmode="decimal" aria-label="시작 레벨 시간(분)"></label>
-          <label>8등 탈락<input id="dur8" data-d="8" inputmode="decimal" aria-label="8등 탈락 뒤 레벨 시간(분)"></label>
-          <label>7등 탈락<input id="dur7" data-d="7" inputmode="decimal" aria-label="7등 탈락 뒤 레벨 시간(분)"></label>
-          <label>6등 탈락<input id="dur6" data-d="6" inputmode="decimal" aria-label="6등 탈락 뒤 레벨 시간(분)"></label>
-          <label>5등부터<input id="dur5" data-d="5" inputmode="decimal" aria-label="5등 탈락부터 레벨 시간(분)"></label>
+          <label>첫 탈락<input id="dur8" data-d="8" inputmode="decimal" aria-label="첫 탈락 뒤 레벨 시간(분)"></label>
+          <label>2번째 탈락<input id="dur7" data-d="7" inputmode="decimal" aria-label="2번째 탈락 뒤 레벨 시간(분)"></label>
+          <label>3번째 탈락<input id="dur6" data-d="6" inputmode="decimal" aria-label="3번째 탈락 뒤 레벨 시간(분)"></label>
+          <label>4번째부터<input id="dur5" data-d="5" inputmode="decimal" aria-label="4번째 탈락부터 레벨 시간(분)"></label>
         </div>
         <p class="out-note">여기서 바꾼 값은 다음 게임부터 기본값이 돼요. 진행 중인 게임의 레벨 시간은 아래 '지금 레벨 시간'으로 바꿔요.</p>
       </div>
@@ -1042,8 +1045,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const BASE = 1;
   const RANK_BONUS = { 1: 4, 2: 2, 3: 1, 4: 1 };
   const DEALER_BONUS = 0.5;
-  /* 블라인드 레벨 시간: 10분으로 시작, 탈락 등수를 입력하면 줄어듦. 8등 입력 때만 블라인드 업 */
-  const BLINDUP_RANK = 8;
+  /* 블라인드 레벨 시간: 10분으로 시작, 탈락이 나오면 줄어듦. 인원(6~8명)과 상관없이 '몇 번째 탈락'으로 정함.
+     첫 탈락 때만 블라인드 업. 저장 키 8·7·6·5 = 첫·2번째·3번째·4번째부터 (예전 등수 키를 그대로 씀) */
   const KEY = "holdem-record-v2";
   const STRUCT_KEY = "holdem-blinds-v3";
   const $ = (id) => document.getElementById(id);
@@ -1065,7 +1068,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     sound: true,
     sndOff: {},                                // 끈 알림 소리 (levelup, bell, minute, arrive)
     startMin: 10,                              // 시작 레벨 시간(분)
-    outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },        // 탈락 등수별 레벨 시간(분). 5는 5등 이하 전부
+    outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },        // 탈락 순서별 레벨 시간(분). 8=첫 탈락, 7=2번째, 6=3번째, 5=4번째부터
     /* 나나츄 홀드엄과 같은 블라인드 + 2,000/4,000 뒤 10분 휴식, 3,000/6,000 끝나면 리바인 마감 */
     levels: [L(100, 200), L(200, 400), L(300, 600), L(400, 800), L(600, 1200),
              L(800, 1600), L(1000, 2000), L(1500, 3000), L(2000, 4000), B(10),
@@ -1083,7 +1086,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   if (!Array.isArray(struct.levels) || !struct.levels.length) struct = defaultStruct();
   struct.outMin = Object.assign(defaultStruct().outMin, struct.outMin || {});
   const startMin = () => n0(struct.startMin) > 0 ? n0(struct.startMin) : 10;
-  const outMinFor = (rank) => n0(struct.outMin[rank >= 8 ? 8 : rank === 7 ? 7 : rank === 6 ? 6 : 5]);
+  /* 등수 → 몇 번째 탈락인지 (참가 인원 기준: 6명 게임의 6등 = 첫 탈락) */
+  const outOrder = (rank) => Math.max(1, state.seats.filter((x) => isPlaying(x)).length - rank + 1);
+  const outMinFor = (rank) => { const k = outOrder(rank); return n0(struct.outMin[k === 1 ? 8 : k === 2 ? 7 : k === 3 ? 6 : 5]); };
 
   let saveTimer;
   function save() {
@@ -1375,6 +1380,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (!state.start) {
       state.start = Date.now(); state.end = null;
       startTimer(); keepAwake(true);
+      $("seatDraw").hidden = true;                          // 시작하면 자리 뽑기는 끝
       toast("게임 시작 " + hhmm(state.start));
     } else if (state.end) {
       return;
@@ -1495,7 +1501,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (!state.start || state.end || t.applied[rank] || rank === 1) return null;   // 1등은 탈락이 아님
     const target = rank >= 1 && rank <= SEATS ? outMinFor(rank) : 0;
     const newDur = target > 0 ? Math.min(n0(t.dur), target) : n0(t.dur);
-    const up = rank === BLINDUP_RANK && t.idx < last();
+    const up = outOrder(rank) === 1 && t.idx < last();
     if (!up && newDur === n0(t.dur)) return null;
     return { rank, up, newDur, oldDur: n0(t.dur) };
   }
@@ -1886,6 +1892,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   }
 
   function refresh() {
+    // 자리 뽑기 버튼: 게임 시작 전, 4번 말고 이름이 2명 이상일 때
+    $("seatDraw").hidden = !!state.start || state.seats.filter((x, i) => i !== DEALER_SEAT - 1 && x.name.trim()).length < 2;
     const counts = {};
     state.seats.forEach((s) => { if (s.rank !== "") counts[s.rank] = (counts[s.rank] || 0) + 1; });
     seatEls.forEach((el, i) => {
@@ -1959,6 +1967,29 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       action();
     });
   }
+  /* 자리 랜덤 뽑기: 4번(딜러)은 그대로, 나머지는 앞자리부터 빈틈없이(6명이면 1·2·3·5·6번) 섞어서 앉힘 */
+  function seatDraw(again) {
+    if (state.start) { toast("게임이 시작된 뒤에는 자리를 섞을 수 없어요"); return; }
+    const D = DEALER_SEAT - 1, dealer = state.seats[D];
+    if (!dealer.name.trim()) { toast("4번(딜러) 자리에 딜러 이름을 먼저 적어 주세요"); seatEls[D].name.focus(); return; }
+    const others = state.seats.filter((x, i) => i !== D && x.name.trim());
+    if (others.length < 2) { toast("플레이어 이름을 2명 이상 적어 주세요"); return; }
+    const before = again || JSON.parse(JSON.stringify(state.seats));
+    const order = [0, 1, 2, 4, 5, 6, 7].slice(0, others.length), mixed = shuffle(others);
+    const seats = Array.from({ length: SEATS }, (_, i) => i === D ? dealer : { name: "", rank: "", mission: "", draw: "", rebuys: 0 });
+    order.forEach((idx, k) => { seats[idx] = mixed[k]; });
+    state.seats = seats;
+    buildSeats(); refresh(); save();
+    openModal({
+      title: "🎲 자리 뽑기 결과",
+      body: `<ol class="res-list">${state.seats.map((x, i) => x.name.trim() ? `<li><b>${i + 1}번</b> ${esc(x.name)}${i === D ? " <small>딜러</small>" : ""}</li>` : "").join("")}</ol>`,
+      ok: "확인", no: "다시 뽑기", noAction: true,
+      onNo: () => setTimeout(() => seatDraw(before), 50)
+    });
+    afterModals(() => showUndo("자리 뽑기", () => { state.seats = before; buildSeats(); refresh(); save(); toast("뽑기 전 자리로 되돌렸어요"); }));
+  }
+  $("seatDraw").addEventListener("click", () => seatDraw());
+
   /* 등수가 들어간 결과를 랭킹에 저장하지 않았으면 초기화 전에 알려 줌 */
   function guardUnsaved(go) {
     const p = payload();
@@ -1981,19 +2012,19 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     renderHeader(); buildSeats(); refresh(); renderTimer(); renderStruct();
     save(); toast("초기화했어요");
   }));
-  /* 이름·미션번호는 남기고 나머지(등수, 뽑기, 타이머, 시작·종료, 저장 상태)는 새 게임으로 */
-  twoTap($("keepBtn"), "이름·미션 남기고 초기화", "한 번 더 누르면 초기화", () => guardUnsaved(() => {
-    const keep = state.seats.map((s) => ({ name: s.name, mission: s.mission }));
+  /* 같은 멤버로 새 게임: 이름(과 테이블 이름)만 남기고 미션번호·등수·뽑기·타이머·저장 상태는 새로 */
+  twoTap($("keepBtn"), "같은 멤버로 새 게임", "한 번 더 누르면 새 게임", () => guardUnsaved(() => {
+    const keep = state.seats.map((s) => ({ name: s.name }));
     const table = state.table;
     state = blankState();
     state.timer.dur = startMin();
     state.table = table;
-    state.seats.forEach((s, i) => { s.name = keep[i].name; s.mission = keep[i].mission; });
+    state.seats.forEach((s, i) => { s.name = keep[i].name; });
     keepAwake(false);
     $("fallback").hidden = true;
     state.day = isoDay(Date.now());
     renderHeader(); buildSeats(); refresh(); renderTimer(); renderStruct();
-    save(); toast("이름과 미션번호만 남기고 초기화했어요");
+    save(); toast("같은 멤버로 새 게임을 준비했어요. 자리를 섞으려면 🎲 자리 랜덤 뽑기");
   }));
   twoTap($("structReset"), "기본 구조로", "한 번 더 누르면 되돌려요", () => {
     struct = defaultStruct(); T().idx = Math.min(T().idx, last());
