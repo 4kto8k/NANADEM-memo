@@ -1083,8 +1083,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     sound: true,
     sndOff: {},                                // 끈 알림 소리 (levelup, bell, minute, arrive)
     startMin: 10,                              // 시작 레벨 시간(분)
-    outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },
-    outMin6: { 1: 6, 2: 5 },                     // 6명 이하 게임: 첫 탈락 6분, 2번째부터 5분        // 탈락 순서별 레벨 시간(분). 8=첫 탈락, 7=2번째, 6=3번째, 5=4번째부터
+    outMin: { 8: 7, 7: 6, 6: 6, 5: 5 },        // 7~8명: 탈락 순서별 레벨 시간(분). 8=첫 탈락, 7=2번째, 6=3번째, 5=4번째부터
+    outMin6: { 1: 6, 2: 5 },                     // 6명 이하 게임: 첫 탈락 6분, 2번째부터 5분
     /* 나나츄 홀드엄과 같은 블라인드 + 2,000/4,000 뒤 10분 휴식, 3,000/6,000 끝나면 리바인 마감 */
     levels: [L(100, 200), L(200, 400), L(300, 600), L(400, 800), L(600, 1200),
              L(800, 1600), L(1000, 2000), L(1500, 3000), L(2000, 4000), B(10),
@@ -1171,6 +1171,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
       if (audio && audio.state === "suspended") audio.resume();
       if (audio) loadSfx(lvStyle());
+      if (canSpeak && !voiceUnlocked) { voiceUnlocked = true; const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); }
     } catch (e) { audio = null; audioOut = null; }
   }
   function tone(type, freq, t, dur, vol) {
@@ -1239,6 +1240,27 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
     } catch (e) {}
   }
+  /* 음성 안내: 폰에 들어 있는 음성 읽기(한국어)로 "레벨 5. 블라인드 400, 800." / 휴식 / 리바인 마감.
+     징 소리가 먼저 울리고 1초쯤 뒤에 말함. 여러 개면 차례대로(음성 읽기가 줄을 세움) */
+  const canSpeak = "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+  let voiceKo = null, voiceUnlocked = false;
+  function pickVoice() {
+    try { const vs = speechSynthesis.getVoices(); voiceKo = vs.find((v) => /^ko/i.test(v.lang) && v.localService) || vs.find((v) => /^ko/i.test(v.lang)) || null; } catch (e) {}
+  }
+  if (canSpeak) { pickVoice(); try { speechSynthesis.addEventListener("voiceschanged", pickVoice); } catch (e) {} }
+  function say(text, delayMs, force) {
+    if (!canSpeak || (!force && !soundOn("voice"))) return;
+    setTimeout(() => {
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "ko-KR"; if (voiceKo) u.voice = voiceKo;
+        u.rate = 1; u.pitch = 1; u.volume = 1;
+        speechSynthesis.speak(u);
+      } catch (e) {}
+    }, delayMs || 0);
+  }
+  const sayLevel = (level, no) => say(level.brk ? `휴식 시간입니다. ${n0(level.min)}분 쉬어요.` : `레벨 ${no}. 블라인드 ${n0(level.sb)}, ${n0(level.bb)}.`, 1100);
+  const sayRebuyClosed = () => say("리바인 마감입니다.", 1600);
   /* 리바인 마감: 복싱 종 땡! 땡! 땡! (배음이 어긋난 사인파 4개가 울리며 사라짐) */
   function bellSound(delaySec, force) {
     if (!force && !soundOn("bell")) return;
@@ -1308,6 +1330,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const r = rebuyIdx();
     if (r >= 0 && oldIdx <= r && newIdx > r) {
       bellSound(1.6);      // 레벨업 소리(약 1.5초)가 끝난 뒤에 울림
+      sayRebuyClosed();
       showNotice("리바인 마감", `<p class="big">${esc(blindText(lv(r)))} 레벨이 끝났어요.<br>지금부터 리바인할 수 없어요.</p>`);
     }
   }
@@ -1751,6 +1774,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   /* ---------- 소리 설정 창: 전체 켜기/끄기, 알림마다 사용 체크, 들어보기 ---------- */
   const SOUNDS = [
     ["levelup", "블라인드 업", "레벨이 바뀔 때 · 소리는 아래에서 골라요", () => previewLevelUp()],
+    ["voice", "음성 안내", "\"레벨 5. 블라인드 400, 800.\" · 휴식·리바인 마감도 말해 줘요", () => say("레벨 5. 블라인드 400, 800.", 0, true)],
     ["bell", "리바인 마감", "복싱 종 땡땡땡 · 리바인 마감 레벨이 끝날 때", () => bellSound(0, true)],
     ["minute", "1분 전", "삑 · 레벨이 1분 남았을 때", () => beep(1, 660, "minute", true)],
     ["arrive", "새로 온 사람", "삑삑 · 여러 테이블에서 우리 테이블로 사람이 올 때", () => beep(2, 880, "arrive", true)]
@@ -2125,6 +2149,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   let annTimer = null;
   function bigAnnounce(level, no, durMin) {
     if (!level) return;
+    sayLevel(level, no);
     $("baK").textContent = level.brk ? "휴식 시간" : "블라인드 업!";
     $("baV").textContent = level.brk ? `${fmt(n0(level.min))}분` : blindText(level);
     $("baS").textContent = level.brk ? "잠깐 쉬어요" : `레벨 ${no}${durMin ? ` · 레벨 시간 ${fmt(durMin)}분` : ""}`;
@@ -2790,7 +2815,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         if (Date.now() > tvAnnQuietUntil) bigAnnounce(S.levels[c.idx], tvLevelNo(S, c.idx), S.levels[c.idx].brk ? 0 : tvCurLen(S, c) / 60000);
         const r = tvRebuyIdx(S);
         if (r >= 0 && tvPrevIdx <= r && c.idx > r) {
-          bellSound(1.6);
+          bellSound(1.6); sayRebuyClosed();
           showNotice("리바인 마감", `<p class="big">${esc(blindText(S.levels[r]))} 레벨이 끝났어요.<br>지금부터 리바인할 수 없어요.</p>`);
         }
       }
@@ -3873,7 +3898,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       bigAnnounce(L[c.idx], L.slice(0, c.idx + 1).filter((x) => !x.brk).length, L[c.idx].brk ? 0 : c.len / 60000);
       levelUpSound(); const el = $("wtimer"); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
       const r = L.findIndex((x) => x.rebuy && !x.brk);
-      if (r >= 0 && wPrevIdx <= r && c.idx > r) { bellSound(1.6); toast("리바인 마감"); }
+      if (r >= 0 && wPrevIdx <= r && c.idx > r) { bellSound(1.6); sayRebuyClosed(); toast("리바인 마감"); }
     }
     if (c.idx !== wPrevIdx) wWarned = -1;
     wPrevIdx = c.idx; wFirst = false;
