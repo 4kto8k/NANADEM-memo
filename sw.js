@@ -2,9 +2,10 @@
    - 화면(index.html): 인터넷이 되면 항상 새로 받아오고, 안 되면 저장해 둔 것을 씀 → 업데이트가 바로 반영됨
    - 아이콘·글꼴·NoSleep: 저장해 둔 것을 먼저 쓰고 뒤에서 새로 받아 둠
    - 랭킹·여러 테이블(Supabase)은 저장하지 않음: 항상 서버에서 */
-const CACHE = "nanadum-v2";
+const CACHE = "nanadum-v3";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./vendor/NoSleep.min.js",
-  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png", "./icons/maskable-512.png"];
+  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png", "./icons/maskable-512.png",
+  "./sounds/gong.mp3", "./sounds/gong-cymbal.mp3"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));

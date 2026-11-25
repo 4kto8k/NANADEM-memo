@@ -1170,6 +1170,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         }
       }
       if (audio && audio.state === "suspended") audio.resume();
+      if (audio) loadSfx(lvStyle());
     } catch (e) { audio = null; audioOut = null; }
   }
   function tone(type, freq, t, dur, vol) {
@@ -1182,47 +1183,40 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     o.connect(g).connect(audioOut || audio.destination);
     o.start(t); o.stop(t + dur + 0.02);
   }
-  /* 블라인드 업 소리 3가지 (소리 설정에서 고름, 기본 '긴장감')
-     폰 스피커는 아주 낮은 음을 못 내서, 배음이 많은 톱니파·삼각파로 '묵직하게 들리게' 만듦 */
-  let noiseBuf = null;
-  function noise() {
-    if (!noiseBuf) { noiseBuf = audio.createBuffer(1, audio.sampleRate * 0.5, audio.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-    const n = audio.createBufferSource(); n.buffer = noiseBuf; return n;
-  }
-  /* 북 한 방: 음이 뚝 떨어지는 몸통(사인+삼각) + 짧은 타격 잡음 */
-  function drumHit(t, vol, f0) {
-    const out = audioOut || audio.destination;
-    [["sine", f0, 1], ["triangle", f0 * 2, 0.55]].forEach(([type, f, m]) => {
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.type = type; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.35, t + 0.4);
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol * m, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
-      o.connect(g).connect(out); o.start(t); o.stop(t + 0.75);
-    });
-    const n = noise(), nf = audio.createBiquadFilter(), ng = audio.createGain();
-    nf.type = "lowpass"; nf.frequency.value = 1400;
-    ng.gain.setValueAtTime(0.0001, t); ng.gain.exponentialRampToValueAtTime(vol * 0.5, t + 0.004); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-    n.connect(nf).connect(ng).connect(out); n.start(t); n.stop(t + 0.2);
-  }
-  /* 브라암: 낮은 단조 화음 톱니파를 필터로 열었다 닫음 (영화 예고편 '부와앙') */
-  function braam(t, freqs, dur, vol) {
-    const out = audioOut || audio.destination;
-    const f = audio.createBiquadFilter(), g = audio.createGain();
-    f.type = "lowpass"; f.Q.value = 4;
-    f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(2600, t + 0.18); f.frequency.exponentialRampToValueAtTime(500, t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.04);
-    g.gain.setValueAtTime(vol, t + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    f.connect(g).connect(out);
-    freqs.forEach((fr) => [-9, 9].forEach((c) => {
-      const o = audio.createOscillator(); o.type = "sawtooth"; o.frequency.value = fr; o.detune.value = c;
-      o.connect(f); o.start(t); o.stop(t + dur + 0.05);
-    }));
-  }
+  /* 블라인드 업 소리 (소리 설정에서 고름, 기본 '징')
+     징·징+심벌즈는 실제 녹음 효과음 파일(sounds/, freesound.org CC0)을 미리 받아 두고 재생.
+     파일을 아직 못 받았으면(첫 실행에 인터넷이 끊긴 경우 등) 오락실 소리로 대신 */
   const LV_STYLES = [
-    ["tension", "긴장감", "둥— 부와앙 (낮은 화음 두 번)"],
-    ["drum", "북", "둥 둥 둥 쾅"],
-    ["arcade", "오락실", "띠리리링 (예전 소리)"]
+    ["gong", "징", "지이잉— (큰 징)", "sounds/gong.mp3"],
+    ["gongcym", "징+심벌즈", "지이잉 촤앙", "sounds/gong-cymbal.mp3"],
+    ["arcade", "오락실", "띠리리링 (예전 소리)", null]
   ];
-  const lvStyle = () => (LV_STYLES.some((x) => x[0] === struct.lvStyle) ? struct.lvStyle : "tension");
+  const lvStyle = () => (LV_STYLES.some((x) => x[0] === struct.lvStyle) ? struct.lvStyle : "gong");
+  const sfxBuf = {}, sfxLoading = {};
+  function loadSfx(key) {
+    const st = LV_STYLES.find((x) => x[0] === key);
+    if (!audio || !st || !st[3] || sfxBuf[key] || sfxLoading[key]) return;
+    sfxLoading[key] = true;
+    fetch(st[3]).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then((ab) => new Promise((ok, no) => audio.decodeAudioData(ab, ok, no)))      // 예전 사파리도 되게 콜백 방식
+      .then((buf) => { sfxBuf[key] = buf; })
+      .catch(() => {})
+      .finally(() => { sfxLoading[key] = false; });
+  }
+  /* 들어보기: 파일을 아직 못 받았으면 받을 때까지(최대 3초) 기다렸다가 들려줌 */
+  function previewLevelUp() {
+    const k = lvStyle();
+    if (k === "arcade" || !audio || sfxBuf[k]) { levelUpSound(true); return; }
+    loadSfx(k);
+    let n = 0; const wait = setInterval(() => { if (sfxBuf[k] || ++n > 30) { clearInterval(wait); levelUpSound(true); } }, 100);
+  }
+  function playSfx(key, t) {
+    const buf = sfxBuf[key]; if (!buf) return false;
+    const src = audio.createBufferSource(), g = audio.createGain();
+    src.buffer = buf; g.gain.value = 1;                 // 이미 음량을 맞춘 파일이라 압축기를 거치지 않고 바로
+    src.connect(g).connect(audio.destination); src.start(t);
+    return true;
+  }
   /* 알림별 소리 켜짐: 전체 켜기 + 알림마다 체크. force = 소리 설정 창에서 들어보기 */
   const soundOn = (key) => !!struct.sound && !(struct.sndOff || {})[key];
   function levelUpSound(force) {
@@ -1231,12 +1225,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (!audio) return;
     try {
       const t = audio.currentTime + 0.03, st = lvStyle();
-      if (st === "tension") {
-        drumHit(t, 0.32, 150); braam(t, [110, 164.8, 220, 261.6], 0.55, 0.12);                 // 둥 (A 단조)
-        drumHit(t + 0.62, 0.36, 130); braam(t + 0.62, [98, 146.8, 196, 233.1, 293.7], 2.0, 0.12); // 부와앙 (한 음 내려간 G 단조)
-      } else if (st === "drum") {
-        drumHit(t, 0.45, 170); drumHit(t + 0.3, 0.5, 170); drumHit(t + 0.6, 0.55, 170);
-        drumHit(t + 1.0, 0.55, 120); braam(t + 1.0, [82.4, 123.5, 164.8, 196], 1.5, 0.14);
+      if (st !== "arcade") loadSfx(st);
+      if (st !== "arcade" && playSfx(st, t)) {
+        /* 징 파일 재생 */
       } else {
         const notes = [523, 659, 784, 1047, 1319];
         for (let r = 0; r < 3; r++) {
@@ -1759,7 +1750,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   $("addBrk").addEventListener("click", () => { struct.levels.push(B(10)); renderStruct(); renderTimer(); save(); });
   /* ---------- 소리 설정 창: 전체 켜기/끄기, 알림마다 사용 체크, 들어보기 ---------- */
   const SOUNDS = [
-    ["levelup", "블라인드 업", "레벨이 바뀔 때 · 소리는 아래에서 골라요", () => levelUpSound(true)],
+    ["levelup", "블라인드 업", "레벨이 바뀔 때 · 소리는 아래에서 골라요", () => previewLevelUp()],
     ["bell", "리바인 마감", "복싱 종 땡땡땡 · 리바인 마감 레벨이 끝날 때", () => bellSound(0, true)],
     ["minute", "1분 전", "삑 · 레벨이 1분 남았을 때", () => beep(1, 660, "minute", true)],
     ["arrive", "새로 온 사람", "삑삑 · 여러 테이블에서 우리 테이블로 사람이 올 때", () => beep(2, 880, "arrive", true)]
@@ -1789,7 +1780,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const b = e.target.closest("[data-lv]"); if (!b) return;
       struct.lvStyle = b.dataset.lv; save();
       $("lvOpts").querySelectorAll("[data-lv]").forEach((x) => x.classList.toggle("on", x === b));
-      unlockAudio(); levelUpSound(true);
+      unlockAudio(); previewLevelUp();
     });
     sync();
   }
