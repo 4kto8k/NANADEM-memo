@@ -449,10 +449,6 @@ body.has-undo .toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 .lv-opt b { font-size: 14px; }
 .lv-opt small { font-size: 10.5px; color: var(--muted); line-height: 1.3; }
 .lv-opt.on { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
-#vcList { display: grid; gap: 6px; }
-#vcList > small { font-size: 11px; color: var(--muted); line-height: 1.45; }
-.vc-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.vc-none { font-size: 13px; color: var(--muted); margin: 0; }
 
 /* tabs + views */
 .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--rail); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
@@ -1175,7 +1171,6 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
       if (audio && audio.state === "suspended") audio.resume();
       if (audio) loadSfx(lvStyle());
-      if (canSpeak && !voiceUnlocked) { voiceUnlocked = true; const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); }
     } catch (e) { audio = null; audioOut = null; }
   }
   function tone(type, freq, t, dur, vol) {
@@ -1223,7 +1218,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     return true;
   }
   /* 알림별 소리 켜짐: 전체 켜기 + 알림마다 체크. force = 소리 설정 창에서 들어보기 */
-  const soundOn = (key) => !!struct.sound && (key === "voice" ? !!struct.voiceOn : !(struct.sndOff || {})[key]);
+  const soundOn = (key) => !!struct.sound && !(struct.sndOff || {})[key];
   function levelUpSound(force) {
     if (!force && !soundOn("levelup")) return;
     try { navigator.vibrate && navigator.vibrate([120, 60, 120, 60, 120, 60, 400]); } catch (e) {}
@@ -1244,45 +1239,6 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
     } catch (e) {}
   }
-  /* 음성 안내: 폰에 들어 있는 음성 읽기(한국어)로 "레벨 5. 블라인드 400, 800." / 휴식 / 리바인 마감.
-     징 소리가 먼저 울리고 1초쯤 뒤에 말함. 여러 개면 차례대로(음성 읽기가 줄을 세움) */
-  const canSpeak = "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
-  let voiceKo = null, voiceUnlocked = false;
-  /* 고품질 목소리를 먼저: 이름에 향상·고급·Premium·Enhanced·Neural·Natural·Siri·Google 등이 들어간 것 */
-  const GOOD_VOICE = /premium|enhanced|neural|natural|siri|google|향상|고급|고품질|wavenet/i;
-  const koVoices = () => { try { return speechSynthesis.getVoices().filter((v) => /^ko/i.test(v.lang)); } catch (e) { return []; } };
-  const voiceScore = (v) => (GOOD_VOICE.test(v.name) ? 2 : 0) + (v.localService ? 1 : 0);
-  function pickVoice() {
-    const vs = koVoices();
-    voiceKo = vs.find((v) => v.name === struct.voiceName) || vs.slice().sort((x, y) => voiceScore(y) - voiceScore(x))[0] || null;
-    if ($("vcList")) renderVoiceCfg();
-  }
-  if (canSpeak) { pickVoice(); try { speechSynthesis.addEventListener("voiceschanged", pickVoice); } catch (e) {} }
-  const VOICE_RATES = [["느리게", 0.85], ["보통", 1], ["빠르게", 1.15]];
-  /* 숫자를 한글로 (400 → 사백, 1200 → 천이백, 12000 → 만 이천): 숫자 그대로보다 억양이 덜 어색함 */
-  function koNum(n) {
-    n = Math.round(n0(n)); if (n <= 0) return "영";
-    const D = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"], U = ["", "십", "백", "천"];
-    const four = (x, isOne) => { let out = ""; for (let i = 3; i >= 0; i--) { const d = Math.floor(x / Math.pow(10, i)) % 10; if (d) out += (d === 1 && i > 0 ? "" : D[d]) + U[i]; } return out; };
-    const parts = [], big = ["", "만", "억"];
-    for (let k = 0; n > 0 && k < 3; k++) { const g = n % 10000; if (g) parts.unshift((g === 1 && k > 0 ? "" : four(g)) + big[k]); n = Math.floor(n / 10000); }
-    return parts.join(" ");
-  }
-  function say(text, delayMs, force) {
-    if (!canSpeak || (!force && !soundOn("voice"))) return;
-    setTimeout(() => {
-      try {
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = "ko-KR";
-        try { if (voiceKo) u.voice = voiceKo; } catch (e) {}          // 목소리 지정이 안 되면 기본 한국어 목소리로
-        u.rate = n0(struct.voiceRate) || 1; u.pitch = 1; u.volume = 1;
-        speechSynthesis.speak(u);
-      } catch (e) {}
-    }, delayMs || 0);
-  }
-  const VOICE_SAMPLE = "블라인드 업. 사백, 팔백.";
-  const sayLevel = (level, no) => say(level.brk ? `휴식 시간. ${n0(level.min)}분.` : `블라인드 업. ${koNum(level.sb)}, ${koNum(level.bb)}.`, 1100);
-  const sayRebuyClosed = () => say("리바인 마감.", 1600);
   /* 리바인 마감: 복싱 종 땡! 땡! 땡! (배음이 어긋난 사인파 4개가 울리며 사라짐) */
   function bellSound(delaySec, force) {
     if (!force && !soundOn("bell")) return;
@@ -1352,7 +1308,6 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const r = rebuyIdx();
     if (r >= 0 && oldIdx <= r && newIdx > r) {
       bellSound(1.6);      // 레벨업 소리(약 1.5초)가 끝난 뒤에 울림
-      sayRebuyClosed();
       showNotice("리바인 마감", `<p class="big">${esc(blindText(lv(r)))} 레벨이 끝났어요.<br>지금부터 리바인할 수 없어요.</p>`);
     }
   }
@@ -1796,7 +1751,6 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   /* ---------- 소리 설정 창: 전체 켜기/끄기, 알림마다 사용 체크, 들어보기 ---------- */
   const SOUNDS = [
     ["levelup", "블라인드 업", "레벨이 바뀔 때 · 소리는 아래에서 골라요", () => previewLevelUp()],
-    ["voice", "음성 안내", "\"블라인드 업. 사백, 팔백.\" · 휴식·리바인 마감 · 기본 꺼짐", () => say(VOICE_SAMPLE, 0, true)],
     ["bell", "리바인 마감", "복싱 종 땡땡땡 · 리바인 마감 레벨이 끝날 때", () => bellSound(0, true)],
     ["minute", "1분 전", "삑 · 레벨이 1분 남았을 때", () => beep(1, 660, "minute", true)],
     ["arrive", "새로 온 사람", "삑삑 · 여러 테이블에서 우리 테이블로 사람이 올 때", () => beep(2, 880, "arrive", true)]
@@ -1812,21 +1766,15 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       title: "소리 설정",
       body: `<label class="snd-all"><input type="checkbox" id="sndAll"${struct.sound ? " checked" : ""}> 알림 소리 켜기</label>
         <div class="snd-list" id="sndList">${SOUNDS.map(([k, name, desc]) => `
-          <div class="snd-row"><label><input type="checkbox" data-snd="${k}"${(k === "voice" ? struct.voiceOn : !struct.sndOff[k]) ? " checked" : ""}><span><b>${name}</b><small>${desc}</small></span></label>
+          <div class="snd-row"><label><input type="checkbox" data-snd="${k}"${struct.sndOff[k] ? "" : " checked"}><span><b>${name}</b><small>${desc}</small></span></label>
           <button type="button" class="mini-btn" data-play="${k}">▶ 듣기</button></div>`).join("")}</div>
-        <div class="lv-style"><b>음성 안내 목소리</b><div id="vcList"></div></div>
         <div class="lv-style"><b>블라인드 업 소리</b><div class="lv-opts" id="lvOpts">${LV_STYLES.map(([k, name, desc]) => `<button type="button" class="lv-opt${lvStyle() === k ? " on" : ""}" data-lv="${k}"><b>${name}</b><small>${desc}</small></button>`).join("")}</div><small>누르면 고르고 바로 들려줘요.</small></div>
         <p>체크한 소리만 울려요. 진동(안드로이드)도 같이 켜지고 꺼져요. 듣기는 꺼져 있어도 들려요.</p>`,
       ok: "확인"
     });
     const sync = () => { $("sndList").classList.toggle("off", !struct.sound); renderSound(); save(); };
     $("sndAll").addEventListener("change", (e) => { struct.sound = e.target.checked; sync(); });
-    $("sndList").addEventListener("change", (e) => {
-      const c = e.target.closest("[data-snd]"); if (!c) return;
-      if (c.dataset.snd === "voice") { struct.voiceOn = c.checked; if (c.checked) { unlockAudio(); say(VOICE_SAMPLE, 0, true); } }
-      else struct.sndOff[c.dataset.snd] = !c.checked;
-      sync();
-    });
+    $("sndList").addEventListener("change", (e) => { const c = e.target.closest("[data-snd]"); if (!c) return; struct.sndOff[c.dataset.snd] = !c.checked; sync(); });
     $("sndList").addEventListener("click", (e) => { const b = e.target.closest("[data-play]"); if (!b) return; unlockAudio(); SOUNDS.find((x) => x[0] === b.dataset.play)[3](); });
     $("lvOpts").addEventListener("click", (e) => {
       const b = e.target.closest("[data-lv]"); if (!b) return;
@@ -1834,26 +1782,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       $("lvOpts").querySelectorAll("[data-lv]").forEach((x) => x.classList.toggle("on", x === b));
       unlockAudio(); previewLevelUp();
     });
-    $("vcList").addEventListener("click", (e) => {
-      const b = e.target.closest("[data-vc],[data-rate]"); if (!b) return;
-      if (b.dataset.vc != null) { struct.voiceName = b.dataset.vc; pickVoice(); }
-      if (b.dataset.rate != null) struct.voiceRate = Number(b.dataset.rate);
-      save(); renderVoiceCfg(); unlockAudio(); say(VOICE_SAMPLE, 0, true);
-    });
-    renderVoiceCfg();
     sync();
-  }
-  /* 목소리 목록 (폰에 있는 한국어 목소리) + 빠르기 */
-  function renderVoiceCfg() {
-    const box = $("vcList"); if (!box) return;
-    const vs = koVoices().sort((x, y) => voiceScore(y) - voiceScore(x) || x.name.localeCompare(y.name));
-    const cur = voiceKo ? voiceKo.name : "", rate = n0(struct.voiceRate) || 1;
-    const ios = /iP(hone|ad|od)/.test(navigator.userAgent);
-    box.innerHTML = (vs.length
-      ? `<div class="vc-list">${vs.slice(0, 8).map((v) => `<button type="button" class="lv-opt${v.name === cur ? " on" : ""}" data-vc="${esc(v.name)}"><b>${esc(v.name.replace(/\s*\(.*?(Korean|한국어).*?\)/i, ""))}</b><small>${GOOD_VOICE.test(v.name) ? "고품질 · " : ""}눌러서 듣기</small></button>`).join("")}</div>`
-      : `<p class="vc-none">${canSpeak ? "이 폰에 한국어 목소리가 없어요." : "이 브라우저는 음성 안내를 못 해요."}</p>`)
-      + `<div class="lv-opts">${VOICE_RATES.map(([n, r]) => `<button type="button" class="lv-opt${r === rate ? " on" : ""}" data-rate="${r}"><b>${n}</b></button>`).join("")}</div>`
-      + `<small>${ios ? "더 자연스러운 목소리: 아이폰 설정 → 손쉬운 사용 → 읽기 및 말하기 → 음성 → 한국어에서 '유나(향상된 품질)'나 Siri 목소리를 받은 뒤 여기서 고르세요." : "더 자연스러운 목소리: 폰 설정 → 텍스트 음성 변환(TTS)에서 Google 엔진의 한국어 고품질 목소리를 받은 뒤 여기서 고르세요."}</small>`;
   }
   $("soundCfg").addEventListener("click", openSoundCfg);
 
@@ -2196,7 +2125,6 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   let annTimer = null;
   function bigAnnounce(level, no, durMin) {
     if (!level) return;
-    sayLevel(level, no);
     $("baK").textContent = level.brk ? "휴식 시간" : "블라인드 업!";
     $("baV").textContent = level.brk ? `${fmt(n0(level.min))}분` : blindText(level);
     $("baS").textContent = level.brk ? "잠깐 쉬어요" : `레벨 ${no}${durMin ? ` · 레벨 시간 ${fmt(durMin)}분` : ""}`;
@@ -2862,7 +2790,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         if (Date.now() > tvAnnQuietUntil) bigAnnounce(S.levels[c.idx], tvLevelNo(S, c.idx), S.levels[c.idx].brk ? 0 : tvCurLen(S, c) / 60000);
         const r = tvRebuyIdx(S);
         if (r >= 0 && tvPrevIdx <= r && c.idx > r) {
-          bellSound(1.6); sayRebuyClosed();
+          bellSound(1.6);
           showNotice("리바인 마감", `<p class="big">${esc(blindText(S.levels[r]))} 레벨이 끝났어요.<br>지금부터 리바인할 수 없어요.</p>`);
         }
       }
@@ -3945,7 +3873,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       bigAnnounce(L[c.idx], L.slice(0, c.idx + 1).filter((x) => !x.brk).length, L[c.idx].brk ? 0 : c.len / 60000);
       levelUpSound(); const el = $("wtimer"); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
       const r = L.findIndex((x) => x.rebuy && !x.brk);
-      if (r >= 0 && wPrevIdx <= r && c.idx > r) { bellSound(1.6); sayRebuyClosed(); toast("리바인 마감"); }
+      if (r >= 0 && wPrevIdx <= r && c.idx > r) { bellSound(1.6); toast("리바인 마감"); }
     }
     if (c.idx !== wPrevIdx) wWarned = -1;
     wPrevIdx = c.idx; wFirst = false;
