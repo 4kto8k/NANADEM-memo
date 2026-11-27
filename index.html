@@ -580,6 +580,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .pchip { display: inline-flex; align-items: center; gap: 4px; background: var(--well); border: 1px solid var(--line); border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 14px; color: var(--chalk); }
 .pchip button { border: 0; background: none; color: var(--muted); font-size: 16px; padding: 0 4px; }
 .pchip.pick { padding: 6px 12px; }
+.pchip.pick.on { background: var(--green); color: var(--green-ink); border-color: var(--green); font-weight: 700; }
 .tseat-head, .tseat { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 0 12px; }
 .tseat-head { background: var(--green); color: var(--green-ink); font-size: 12px; font-weight: 700; padding-block: 8px; }
 .tseat { padding-block: 10px; border-top: 1px solid var(--line); }
@@ -2949,7 +2950,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     } else if (!tvFinal() && t.status !== "setup" && counts.length > 1) {
       const mx = counts.reduce((a, b) => (b.n > a.n ? b : a)), mn = counts.reduce((a, b) => (b.n < a.n ? b : a));
       if (mx.n - mn.n >= 2) hint = `<div class="hint">${mx.no}번 테이블 → ${mn.no}번 테이블로 1명 이동을 추천해요 (${mx.n}명 : ${mn.n}명)${tvCanOp(mx.no)
-        ? `<button type="button" class="mini-btn" id="tvAutoMove" data-from="${mx.no}" data-to="${mn.no}">자동 이동</button>` : ` · ${mx.no}번 테이블 폰에서 옮겨요`}</div>`;
+        ? `<button type="button" class="mini-btn" id="tvAutoMove" data-from="${mx.no}" data-to="${mn.no}">골라서 이동</button>` : ` · ${mx.no}번 테이블 폰에서 옮겨요`}</div>`;
     }
     const ownLine = t.status === "setup" ? `<div class="own-line">담당 폰 ${tables.filter((x) => x.owner_hash).length}/${tables.length} 테이블 · ${tables.map((x) => x.owner_hash
       ? `<span class="ok">${x.no}번 ✓ ${esc(x.owner_name || "")}</span>` : `<span>${x.no}번 아직</span>`).join(" · ")}</div>` : "";
@@ -3279,19 +3280,35 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const pref = free.filter((x) => tvFinal() || x !== DEALER_SEAT);
     return shuffle(pref.length ? pref : free)[0] || null;
   }
-  /* 자동 이동: 인원 많은 테이블에서 딜러(4번)를 뺀 한 명을 랜덤으로, 적은 테이블 빈자리로 */
+  /* 인원 맞추기: 많은 테이블에서 옮길 사람을 딜러가 고르고(🎲 랜덤도 가능), 보낼 테이블·자리도 고름. 기본은 가장 적은 테이블·빈자리 랜덤 */
   function tvAutoMove(from, to) {
-    const pool = tvAlive().filter((p) => p.table_no === from && (tvFinal() || p.seat !== DEALER_SEAT));
-    const p = shuffle(pool.length ? pool : tvAlive().filter((x) => x.table_no === from))[0];
-    const seat = tvPickSeat(to);
-    if (!p || !seat) { toast("옮길 사람이나 빈자리가 없어요"); return; }
+    const pool = tvAlive().filter((p) => p.table_no === from && (tvFinal() || p.seat !== DEALER_SEAT)).sort((x, y) => x.seat - y.seat);
+    const others = tvData.tables.filter((x) => x.no !== from)
+      .map((x) => ({ no: x.no, n: tvAlive().filter((p) => p.table_no === x.no).length })).sort((x, y) => x.n - y.n || x.no - y.no);
+    if (!pool.length || !others.length) { toast("옮길 사람이나 테이블이 없어요"); return; }
+    const def = others.some((x) => x.no === to) ? to : others[0].no;
+    let pick = null;
     openModal({
-      title: "자동 이동",
-      body: `<p class="big"><b>${esc(p.name)}</b></p><p>${esc(tvTableLabel(from))} ${p.seat}번 자리 → <b style="color:var(--green)">${esc(tvTableLabel(to))} ${seat}번 자리</b></p><p>딜러(4번)는 옮기지 않아요. 다른 사람을 원하면 '다른 사람'을 눌러요.</p>`,
-      ok: "이동", no: "다른 사람", noAction: true,
-      onOk: () => tvAct("player_set", { id: p.id, table_no: to, seat }, `${p.name} → ${tvTableLabel(to)} ${seat}번 자리 (자동 이동)`),
-      onNo: () => setTimeout(() => tvAutoMove(from, to), 50)
+      title: `인원 맞추기 · ${esc(tvTableLabel(from))}에서 1명`,
+      body: `<p>옮길 사람을 골라요. 딜러(4번)는 빠져 있어요.</p>
+        <div class="pool" id="amPool">${pool.map((p) => `<button type="button" class="pchip pick" data-mv="${p.id}">${p.seat}번 ${esc(p.name)}</button>`).join("")}<button type="button" class="pchip pick" data-mv="rand">🎲 랜덤</button></div>
+        <div class="form2"><label>보낼 테이블<select id="amTable">${others.map((x) => `<option value="${x.no}"${x.no === def ? " selected" : ""}>${esc(tvTableLabel(x.no))} · ${x.n}명</option>`).join("")}</select></label>
+          <label>자리<select id="amSeat">${tvSeatOptions(def)}</select></label></div>`,
+      ok: "이동", no: "취소",
+      onOk: () => {
+        const p = pool.find((x) => x.id === pick), no = Number($("amTable").value), v = $("amSeat").value;
+        if (!p) { toast("옮길 사람을 골라 주세요"); setTimeout(() => tvAutoMove(from, no), 50); return; }
+        const seat = v === "r" ? tvPickSeat(no) : Number(v);
+        if (!seat) { toast("그 테이블에 빈자리가 없어요"); return; }
+        tvAct("player_set", { id: p.id, table_no: no, seat }, `${p.name} → ${tvTableLabel(no)} ${seat}번 자리 (인원 맞추기)`);
+      }
     });
+    $("amPool").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-mv]"); if (!b) return;
+      pick = b.dataset.mv === "rand" ? shuffle(pool)[0].id : b.dataset.mv;
+      $("amPool").querySelectorAll("[data-mv]").forEach((x) => x.classList.toggle("on", x.dataset.mv === pick));
+    });
+    $("amTable").addEventListener("change", () => { $("amSeat").innerHTML = tvSeatOptions(Number($("amTable").value)); });
   }
   /* 테이블 깨기: 이 테이블 남은 사람을 다른 테이블 빈자리로 고르게(적은 테이블부터) 랜덤 배정하고 테이블을 없앰 */
   function tvBreak() {
