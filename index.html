@@ -280,6 +280,8 @@ details.struct[open] summary::after { content: "접기"; }
 .toast.show { opacity: 1; }
 /* timer status pills */
 .t-info { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.pill.cnt { color: var(--chalk); }
+.pill.cnt b { color: var(--gold); }
 .pill {
   font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
   background: var(--well); border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
@@ -339,7 +341,16 @@ details.struct[open] summary::after { content: "접기"; }
 .sheet {
   width: 100%; max-width: 400px; background: var(--rail); border: 1px solid var(--line);
   border-radius: 18px; padding: 18px; display: grid; gap: 12px;
+  max-height: 100%; overflow-y: auto; overscroll-behavior: contain;
 }
+.bk-list { display: grid; gap: 6px; }
+.bk-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; align-items: center; background: var(--well); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: 14px; color: var(--chalk); }
+.bk-row select { width: 100%; background: var(--rail); border: 1px solid var(--line); border-radius: 8px; padding: 7px 6px; font-size: 15px; color: var(--chalk); font-family: var(--font); }
+.bk-sum { font-size: 13px; color: var(--muted); }
+.bk-sum.bad { color: var(--red); font-weight: 700; }
+.ft-mode { display: grid; gap: 6px; font-size: 14px; color: var(--chalk); }
+.ft-mode label { display: flex; gap: 8px; align-items: center; }
+.pchip.pick:disabled { opacity: 0.4; }
 .sheet h2 { margin: 0; font-size: 19px; font-weight: 900; text-wrap: balance; }
 .sheet h2.alert { color: var(--red); font-size: 24px; text-align: center; }
 .sheet p { margin: 0; font-size: 14px; color: var(--muted); }
@@ -780,6 +791,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     </div>
     <div class="bar"><i id="t-bar"></i></div>
     <div class="t-info">
+      <span class="pill cnt" id="t-cnt" hidden></span>
       <span class="pill" id="t-dur">레벨 시간 <b>10분</b></span>
       <span class="pill" id="t-rb" hidden></span>
     </div>
@@ -968,6 +980,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       </div>
       <div class="bar"><i id="tt-bar"></i></div>
       <div class="t-info">
+        <span class="pill cnt" id="tt-cnt" hidden></span>
         <span class="pill" id="tt-dur">레벨 시간 <b>10분</b></span>
         <span class="pill" id="tt-rb" hidden></span>
       </div>
@@ -1396,6 +1409,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
     /* 레벨 시간 · 리바인 상태 */
     $("t-dur").innerHTML = `레벨 시간 <b>${fmt(n0(t.dur))}분</b>`;
+    { const pl = state.seats.filter((x) => isPlaying(x)), left = pl.filter((x) => x.rank === "").length, el = $("t-cnt");
+      const h = `👥 남은 <b>${left}</b> / ${pl.length}명`;
+      if (el.innerHTML !== h) el.innerHTML = h;
+      el.hidden = pl.length < 2; }
     const r = rebuyIdx(), rb = $("t-rb");
     rb.hidden = r < 0;
     if (r >= 0) {
@@ -2753,7 +2770,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (!prev || !my || t.status === "setup" || (tvPrevStatus && tvPrevStatus !== t.status)) return;
     const came = tvAlive().filter((p) => p.table_no === my && prev[p.id] != null && prev[p.id] !== my);
     const left = tvAlive().filter((p) => prev[p.id] === my && p.table_no !== my);
-    if (came.length) {
+    if (came.length && Date.now() - tvMyAt > 4000) {      // 내가 방금 옮긴 거면(테이블 깨기 등) 자리표를 따로 보여 주니 생략
       beep(2, 880, "arrive");
       showNotice(came.length === 1 ? "새로 온 사람" : `새로 온 사람 ${came.length}명`,
         `<ul class="res-list">${came.sort((a, b) => a.seat - b.seat).map((p) => `<li><b>${esc(p.name)}</b> → ${p.seat}번 자리 <span class="r">(${esc(tvTableLabel(prev[p.id]))}에서)</span></li>`).join("")}</ul>`);
@@ -2782,6 +2799,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     tvWatch();
     tvSyncHostName();
     tvMergeNotice();
+    tvFtNotice();
   }
   /* 여러 폰에서 동시에 탈락을 눌러도 놓치지 않게: 상태를 볼 때마다 확인해서 필요하면 타이머를 멈춤.
      파이널 인원 도달 정지는 한 번만(ftPaused). 딜러가 일부러 재개하면 다시 멈추지 않음. */
@@ -2846,6 +2864,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     ct.classList.toggle("warn", c.running && rem <= 60000);
     $("tt-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / tvCurLen(S, c)) * 100)) + "%";
     $("tt-dur").innerHTML = `레벨 시간 <b>${fmt(tvCurLen(S, c) / 60000)}분</b>`;
+    { const alive = tvAlive().length, inUse = tvTablesInUse().length, el = $("tt-cnt");
+      const h = `👥 남은 <b>${alive}</b> / ${tvPlayers().length}명${inUse > 1 ? ` · ${inUse}테이블` : ""}`;
+      if (el.innerHTML !== h) el.innerHTML = h;
+      el.hidden = !tvPlayers().length; }
     const r = tvRebuyIdx(S), rb = $("tt-rb");
     rb.hidden = r < 0;
     if (r >= 0) {
@@ -2928,7 +2950,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   /* ---------- 화면 그리기 ---------- */
   /* 내용이 바뀐 곳만 다시 그림: 다른 테이블 소식으로 내 자리표가 다시 그려지다가 누른 버튼이 사라지는 일 방지 */
   let tvBustOpen = false, tvMergeTold = "";
-  /* 합치기로 타이머가 멈추면 모든 폰에 창 (테이블 수마다 한 번). 그 테이블을 조작할 수 있는 폰엔 [깨기] 바로 */
+  /* 합치기·파이널 팝업: 가로 화면에서도 보이게 창으로. 조작할 수 있는 폰은 1분마다 다시 띄움(나중에 눌렀어도) */
+  let tvPopAt = { merge: 0, ft: 0 }, tvFtTold = "";
+  const tvCanMerge = () => tvIsBoss() || tvData.tables.some((x) => tvCanOp(x.no) && tvAlive().some((p) => p.table_no === x.no));
   function tvMergeNotice() {
     const m = tvMergeInfo(), c = tvT().clock;
     if (!m || c.running || c.mergeAt !== m.inUse || !tvActive()) return;
@@ -2936,18 +2960,57 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (tvMergeTold === key) return;
     tvMergeTold = key;
     beep(2, 880, "arrive");
-    afterModals(() => {
-      const now = tvMergeInfo(); if (!now || now.inUse !== m.inUse) return;
-      const f = now.few, can = tvCanOp(f.no);
-      openModal({
-        title: "🔀 테이블 합치기",
-        body: `<p class="big">${now.alive}명 남았어요.</p><p>타이머를 멈췄어요. <b>${esc(tvTableLabel(f.no))}</b>(${f.n}명, 가장 적음)을 깨서 테이블 ${now.inUse - 1}개로 합쳐요.</p>
-          <p>${can ? "" : `${esc(tvTableLabel(f.no))} 폰이나 방장·플로어가 깨요. `}합친 뒤 ${tvIsBoss() ? "타이머를 재개하세요." : "방장·플로어가 타이머를 재개해요."}</p>`,
-        ok: can ? `${f.no}번 테이블 깨기` : "확인", no: can ? "나중에" : undefined,
-        onOk: () => { if (can) setTimeout(() => { tv.table = f.no; tvSaveLocal(); renderTV(); tvBreak(); }, 60); }
-      });
+    afterModals(() => tvMergePick());
+  }
+  function tvMergePick() {
+    const m = tvMergeInfo(); if (!m) return;
+    tvPopAt.merge = Date.now();
+    const list = [...new Set(tvAlive().map((p) => p.table_no))].filter((x) => x != null)
+      .map((no) => ({ no, n: tvAlive().filter((p) => p.table_no === no).length })).sort((x, y) => x.n - y.n || y.no - x.no);
+    const paused = !tvEff().running;
+    if (!tvCanMerge()) {
+      showNotice("🔀 테이블 합치기", `<p class="big">${m.alive}명 남았어요.</p><p>${paused ? "타이머를 멈췄어요. " : ""}테이블 ${m.inUse - 1}개로 합쳐요. 방장·플로어나 깨지는 테이블 폰이 옮길 자리를 정해요.</p>`);
+      return;
+    }
+    let pick = (list.find((x) => tvCanOp(x.no)) || {}).no;
+    openModal({
+      title: "🔀 테이블 합치기",
+      body: `<p class="big">${m.alive}명 남았어요.</p>
+        <p>${paused ? "타이머를 멈췄어요. " : ""}테이블 ${m.inUse - 1}개로 합쳐요. <b>깰 테이블</b>을 고르세요. (적은 순서)</p>
+        <div class="pool" id="mgPick">${list.map((x) => `<button type="button" class="pchip pick${x.no === pick ? " on" : ""}" data-mg="${x.no}"${tvCanOp(x.no) ? "" : " disabled"}>${esc(tvTableLabel(x.no, true))} · ${x.n}명</button>`).join("")}</div>
+        <p>다음 화면에서 그 테이블 사람마다 보낼 테이블을 골라요. 합친 뒤 방장·플로어가 타이머를 재개해요.</p>`,
+      ok: "다음", no: "나중에",
+      onOk: () => { if (pick) setTimeout(() => tvBreak(pick), 60); }
+    });
+    $("mgPick").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-mg]"); if (!b || b.disabled) return;
+      pick = Number(b.dataset.mg);
+      $("mgPick").querySelectorAll("[data-mg]").forEach((x) => x.classList.toggle("on", x === b));
     });
   }
+  /* 파이널 테이블(2테이블 → 1): 타이머가 멈추면 팝업. 방장·플로어는 바로 자리 정하기 */
+  const tvFtReady = () => !!tvData && !tvFinal() && tvT().status !== "setup" && tvAlive().length > 1 && tvAlive().length <= n0(tvS().ftSize) && tvTablesInUse().length > 1;
+  function tvFtNotice() {
+    if (!tvFtReady() || tvEff().running || !tvActive()) return;
+    const key = `${tvT().id}:ft`;
+    if (tvFtTold === key) return;
+    tvFtTold = key;
+    beep(2, 880, "arrive");
+    afterModals(() => tvFtPop());
+  }
+  function tvFtPop() {
+    if (!tvFtReady()) return;
+    tvPopAt.ft = Date.now();
+    const n = tvAlive().length;
+    if (!tvIsBoss()) { showNotice("🏆 파이널 테이블", `<p class="big">${n}명 남았어요. 파이널 테이블!</p><p>타이머를 멈췄어요. ${esc(tvBossLabel())} 폰에서 파이널 자리를 정해요.</p>`); return; }
+    tvFtDraw(true);
+  }
+  setInterval(() => {                                   // 나중에 눌렀어도 조작할 폰엔 1분마다 다시
+    if (!tvData || !tvActive() || !$("modal").hidden || tvEff().running) return;
+    const m = tvMergeInfo();
+    if (m && tvT().clock.mergeAt === m.inUse && tvCanMerge() && Date.now() - tvPopAt.merge > 60000) { beep(1, 880, "arrive"); tvMergePick(); }
+    else if (!m && tvFtReady() && tvIsBoss() && Date.now() - tvPopAt.ft > 60000) { beep(1, 880, "arrive"); tvFtPop(); }
+  }, 15000);
   function setHTML(el, html) { if (el.__html !== html) { el.innerHTML = html; el.__html = html; } }
   function renderTV() {
     $("tvLobby").hidden = !!tv.id;
@@ -3227,7 +3290,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (g("#tvEditTable")) { tvEditTable(); return; }
     if ((b = g("#tvAutoMove"))) { tvAutoMove(Number(b.dataset.from), Number(b.dataset.to)); return; }
     if (g("#tvBreak")) { tvBreak(); return; }
-    if ((b = g("#tvBreakHint"))) { tv.table = Number(b.dataset.no); tvSaveLocal(); renderTV(); tvBreak(); return; }
+    if ((b = g("#tvBreakHint"))) { tvMergePick(); return; }
     if (g("#tvBustMore")) { tvBustOpen = !tvBustOpen; renderTV(); return; }
     if (g("#tvSound")) { openSoundCfg(); return; }
     if (g("#tvInvite")) { tvInvite(); return; }
@@ -3255,7 +3318,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         onNo: () => tvDoBust(p)
       });
     } else {
-      tvDoBust(p);          // 확인 창 없이 바로. 잘못 눌렀으면 아래 '되돌리기'(10초)
+      tvDoBust(p);          // 확인 창 없이 바로. 잘못 눌렀으면 '탈락 순서'의 [되돌리기]
     }
   }
   function tvDoBust(p) {
@@ -3276,7 +3339,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       }
     }
     const rank = alive.length;
-    tvAct("bust", args, label).then((res) => { if (res) showUndo(`${p.name} ${rank}등 탈락`, () => tvUnbustNow(p.id)); });
+    tvAct("bust", args, label);                      // 잘못 눌렀으면 '탈락 순서'의 [되돌리기]
   }
   /* 되돌릴 자리: 원래 자리가 비어 있으면 거기, 아니면 남아 있는 테이블의 빈자리 (없앤 테이블로는 안 돌아감) */
   function tvUnbustTarget(p) {
@@ -3352,38 +3415,53 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     });
     $("amTable").addEventListener("change", () => { $("amSeat").innerHTML = tvSeatOptions(Number($("amTable").value)); });
   }
-  /* 테이블 깨기: 이 테이블 남은 사람을 다른 테이블 빈자리로 고르게(적은 테이블부터) 랜덤 배정하고 테이블을 없앰 */
-  function tvBreak() {
-    const no = tv.table; if (!no) return;
-    const movers = shuffle(tvAlive().filter((p) => p.table_no === no));
-    const others = tvData.tables.filter((x) => x.no !== no);
-    const count = {}, taken = {};
-    others.forEach((x) => { count[x.no] = tvAlive().filter((p) => p.table_no === x.no).length; taken[x.no] = new Set(); });
-    const free = others.reduce((a, x) => a + tvEmptySeats(x.no).length, 0);
+  /* 테이블 깨기: 깰 테이블 사람마다 보낼 테이블을 고름(기본: 적은 테이블부터 고르게). 자리는 그 테이블 빈자리 랜덤(4번 딜러 자리는 마지막) */
+  function tvBreak(noArg) {
+    const no = noArg || tv.table; if (!no) return;
+    const movers = tvAlive().filter((p) => p.table_no === no).sort((x, y) => x.seat - y.seat);
+    const others = tvData.tables.filter((x) => x.no !== no).sort((x, y) => x.no - y.no);
     if (!others.length) { toast("다른 테이블이 없어요"); return; }
+    const count = {}, cap = {};
+    others.forEach((x) => { count[x.no] = tvAlive().filter((p) => p.table_no === x.no).length; cap[x.no] = tvEmptySeats(x.no).length; });
+    const free = others.reduce((a2, x) => a2 + cap[x.no], 0);
     if (movers.length > free) { toast(`다른 테이블 빈자리가 모자라요 (옮길 사람 ${movers.length}명, 빈자리 ${free}개)`); return; }
-    const list = [];
-    for (const p of movers) {
-      const order = others.filter((x) => tvEmptySeats(x.no).length > taken[x.no].size).sort((a, b) => count[a.no] - count[b.no] || Math.random() - 0.5);
-      const tn = order[0].no, seat = tvPickSeat(tn, taken[tn]);
-      taken[tn].add(seat); count[tn]++;
-      list.push({ id: p.id, table_no: tn, seat, name: p.name });
-    }
+    const used = {}; others.forEach((x) => { used[x.no] = 0; });
+    const plan = {};
+    shuffle(movers).forEach((p) => {
+      const t = others.filter((x) => used[x.no] < cap[x.no]).sort((x, y) => (count[x.no] + used[x.no]) - (count[y.no] + used[y.no]) || Math.random() - 0.5)[0];
+      plan[p.id] = t.no; used[t.no]++;
+    });
     openModal({
       title: `${esc(tvTableLabel(no))} 깨기`,
-      body: `<p>남은 ${movers.length}명을 다른 테이블 빈자리로 옮기고 이 테이블을 없애요.</p>
-        <ul class="res-list">${list.map((x) => `<li>${esc(x.name)} → ${esc(tvTableLabel(x.table_no))} ${x.seat}번</li>`).join("")}</ul>`,
+      body: `<p>남은 ${movers.length}명을 어느 테이블로 보낼지 골라요. 자리는 그 테이블 빈자리에서 랜덤이에요.</p>
+        <div class="bk-list" id="bkList">${movers.map((p) => `<label class="bk-row"><span>${p.seat}번 ${esc(p.name)}</span>
+          <select data-bk="${p.id}">${others.map((x) => `<option value="${x.no}"${plan[p.id] === x.no ? " selected" : ""}>→ ${esc(tvTableLabel(x.no, true))}</option>`).join("")}</select></label>`).join("")}</div>
+        <p class="bk-sum" id="bkSum"></p>`,
       ok: "깨기", no: "취소",
       onOk: async () => {
+        const want = {}; $("mBody").querySelectorAll("[data-bk]").forEach((sel) => { want[sel.dataset.bk] = Number(sel.value); });
+        const over = others.filter((x) => movers.filter((p) => want[p.id] === x.no).length > cap[x.no]);
+        if (over.length) { toast(`${over.map((x) => x.no + "번").join(", ")} 테이블 빈자리가 모자라요`); setTimeout(() => tvBreak(no), 50); return; }
+        const taken = {}; others.forEach((x) => { taken[x.no] = new Set(); });
+        const list = movers.map((p) => { const tn = want[p.id], seat = tvPickSeat(tn, taken[tn]); taken[tn].add(seat); return { id: p.id, table_no: tn, seat, name: p.name }; });
         const res = await tvActMany([["assign", { list: list.map(({ id, table_no, seat }) => ({ id, table_no, seat })) }], ["table_del", { no }]], `테이블 깨기 · ${movers.length}명 이동`);
         if (res) {
           const dl = list.find((x) => (movers.find((m) => m.id === x.id) || {}).seat === DEALER_SEAT) || list[0];
           tv.table = dl ? dl.table_no : null; tvSaveLocal(); renderTV();
+          tvShowSeats("테이블 깨기 · 옮긴 자리", [...new Set(list.map((x) => x.table_no))]);
           const resume = !tvEff().running && tvIsBoss() ? " 확인했으면 타이머를 재개하세요" : "";
-          toast(dl ? `테이블을 깼어요. ${dl.name}님이 옮겨 간 ${tvTableLabel(dl.table_no)}을 보여 드려요.${resume}` : `테이블을 깼어요.${resume}`);
+          toast(`테이블을 깼어요.${resume}`);
         }
       }
     });
+    const sum = () => {
+      const want = {}; $("mBody").querySelectorAll("[data-bk]").forEach((sel) => { want[sel.dataset.bk] = Number(sel.value); });
+      const parts = others.map((x) => { const add = movers.filter((p) => want[p.id] === x.no).length; return { no: x.no, n: count[x.no] + add, bad: add > cap[x.no] }; });
+      const el = $("bkSum"); if (!el) return;
+      el.textContent = "깬 뒤: " + parts.map((x) => `${x.no}번 ${x.n}명${x.bad ? " (자리 모자람)" : ""}`).join(" · ");
+      el.classList.toggle("bad", parts.some((x) => x.bad));
+    };
+    $("bkList").addEventListener("change", sum); sum();
   }
   function tvSeatOptions(no, keepSeat) {
     const free = tvEmptySeats(no);
@@ -3531,20 +3609,30 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   }
 
   /* ---------- 파이널 테이블 ---------- */
-  function tvFtDraw() {
+  function tvFtDraw(fromPop) {
     const alive = tvAlive(), S = tvSeatsOf();
     if (alive.length > S) { toast(`테이블당 자리(${S})보다 사람이 많아요. 토너 세팅에서 자리 수를 늘려 주세요`); return; }
-    const def = tv.table || tvData.tables[0].no;
+    const inUse = tvData.tables.map((x) => ({ no: x.no, n: alive.filter((p) => p.table_no === x.no).length })).filter((x) => x.n > 0).sort((x, y) => y.n - x.n || x.no - y.no);
+    const def = (inUse[0] || tvData.tables[0]).no;
     openModal({
-      title: "파이널 테이블 자리 뽑기",
-      body: `<p>남은 ${alive.length}명을 한 테이블에 모으고 자리를 랜덤으로 뽑아요. 파이널 테이블에서는 4번 딜러 규칙이 없어요.</p>
-        <div class="form2"><label>파이널 테이블로 쓸 테이블<select id="ftNo">${tvData.tables.map((x) => `<option value="${x.no}"${x.no === def ? " selected" : ""}>${esc(tvTableLabel(x.no))}</option>`).join("")}</select></label></div>`,
-      ok: "뽑기", no: "취소",
+      title: "🏆 파이널 테이블",
+      body: `${fromPop ? `<p class="big">${alive.length}명 남았어요. 파이널 테이블!</p><p>타이머를 멈췄어요.</p>` : ""}
+        <div class="form2"><label>파이널로 쓸 테이블 (나머지는 깨져요)<select id="ftNo">${inUse.map((x) => `<option value="${x.no}"${x.no === def ? " selected" : ""}>${esc(tvTableLabel(x.no))} · ${x.n}명</option>`).join("")}</select></label></div>
+        <div class="ft-mode" id="ftMode"><label><input type="radio" name="ftMode" value="all" checked> 전체 자리 다시 뽑기 (랜덤)</label>
+          <label><input type="radio" name="ftMode" value="move"> 깨지는 테이블 사람만 빈자리로 (나머지는 그대로)</label></div>
+        <p>파이널 테이블에서는 4번 딜러 규칙이 없어요. 자리표가 모든 폰에 떠요.</p>`,
+      ok: "자리 정하기", no: fromPop ? "나중에" : "취소",
       onOk: async () => {
-        const no = Number($("ftNo").value);
-        const seats = shuffle(Array.from({ length: S }, (_, i) => i + 1));
-        const list = shuffle(alive).map((p, i) => ({ id: p.id, table_no: no, seat: seats[i] }));
-        const res = await tvAct("assign", { list, status: "final", ft_table: no, clock: tvPause(tvEff(), tvNow()) }, "파이널 테이블 자리 뽑기");
+        const no = Number($("ftNo").value), mode = ($("mBody").querySelector("input[name=ftMode]:checked") || {}).value || "all";
+        let list;
+        if (mode === "move") {
+          const stay = alive.filter((p) => p.table_no === no), free = shuffle(Array.from({ length: S }, (_, i) => i + 1).filter((x) => !stay.some((p) => p.seat === x)));
+          list = alive.filter((p) => p.table_no !== no).map((p, i) => ({ id: p.id, table_no: no, seat: free[i] }));
+        } else {
+          const seats = shuffle(Array.from({ length: S }, (_, i) => i + 1));
+          list = shuffle(alive).map((p, i) => ({ id: p.id, table_no: no, seat: seats[i] }));
+        }
+        const res = await tvAct("assign", { list, status: "final", ft_table: no, clock: tvPause(tvEff(), tvNow()) }, mode === "move" ? "파이널 테이블 (옮기는 사람만)" : "파이널 테이블 자리 뽑기");
         if (res) { tv.table = no; tvSaveLocal(); renderTV(); tvShowFt(); }
       }
     });
