@@ -240,6 +240,9 @@ details.struct[open] summary::after { content: "접기"; }
   gap: 6px; align-items: center;
 }
 .lv-row.head { font-size: 11px; color: var(--muted); text-align: center; }
+.lv-row.tv { grid-template-columns: 38px minmax(0, 1fr) 8px minmax(0, 1fr) 42px 50px 24px; gap: 5px; }
+.blinds .ante { font-size: 15px; font-weight: 800; color: var(--gold); margin-top: 2px; }
+.blinds .ante[hidden] { display: none; }
 .lv-row .slash { text-align: center; color: var(--muted); }
 .lv-row .brk-label { grid-column: 2 / 5; color: var(--gold); font-weight: 700; font-size: 14px; padding-left: 4px; }
 .lv-row input { padding: 7px 4px; }
@@ -253,6 +256,7 @@ details.struct[open] summary::after { content: "접기"; }
 .lv-del { border: 0; background: none; color: var(--muted); font-size: 18px; padding: 4px 0; }
 .struct-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .struct-tools .btn-line { flex: 1; padding: 9px 10px; font-size: 13px; }
+.struct-tools > .btn-save:only-child { flex: 1; }
 .all-min { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .all-min input {
   width: 64px; background: var(--well); border: 1px solid var(--line); border-radius: 8px;
@@ -951,6 +955,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       <div class="blinds">
         <span class="k" id="tt-bk">스몰 / 빅 블라인드</span>
         <span class="v" id="tt-bl">100 / 200</span>
+        <span class="ante" id="tt-ante" hidden></span>
       </div>
       <div class="count paused" id="tt-ct" role="timer" aria-live="off" title="1초 꾹 누르면 남은 시간 바꾸기">10:00</div>
       <div class="t-adj" id="tt-adj" aria-label="남은 시간 조절">
@@ -2123,11 +2128,11 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
   /* ---------- 블라인드 업 큰 공지: 화면 전체에 3초 (누르면 바로 닫힘) ---------- */
   let annTimer = null;
-  function bigAnnounce(level, no, durMin) {
+  function bigAnnounce(level, no, durMin, extra) {
     if (!level) return;
     $("baK").textContent = level.brk ? "휴식 시간" : "블라인드 업!";
     $("baV").textContent = level.brk ? `${fmt(n0(level.min))}분` : blindText(level);
-    $("baS").textContent = level.brk ? "잠깐 쉬어요" : `레벨 ${no}${durMin ? ` · 레벨 시간 ${fmt(durMin)}분` : ""}`;
+    $("baS").textContent = level.brk ? (level.note || "잠깐 쉬어요") : `레벨 ${no}${extra ? ` · ${extra}` : ""}${durMin ? ` · ${fmt(durMin)}분` : ""}`;
     const el = $("bigAnn"); el.hidden = false;
     el.style.animation = "none"; void el.offsetWidth; el.style.animation = "";
     fitText($("baV"));
@@ -2620,7 +2625,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const tvActive = () => location.hash === "#tourney";
   const tvS = () => tvData.tourney.settings;
   const tvT = () => tvData.tourney;
-  const tvLen = (S, c, i) => (S.levels[i].brk ? Math.max(0.1, n0(S.levels[i].min)) : Math.max(0.1, n0(c.dur))) * 60000;
+  /* 레벨 시간: 휴식은 그 휴식의 분, 블라인드 레벨은 그 레벨에 '분'이 적혀 있으면 그 시간, 아니면 기본 레벨 시간(c.dur) */
+  const tvLen = (S, c, i) => (S.levels[i].brk ? Math.max(0.1, n0(S.levels[i].min)) : Math.max(0.1, n0(S.levels[i].min) || n0(c.dur))) * 60000;
+  const tvAnteText = (S, L) => (S.ante === "bb" && L && !L.brk ? `BB 앤티 ${money(L.bb)}` : "");
   function tvNorm(S, C, now) {
     const c = Object.assign({}, C), lastI = S.levels.length - 1;
     if (c.idx > lastI) c.idx = lastI;
@@ -2787,7 +2794,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (tvPrevIdx != null && c.idx !== tvPrevIdx && tvData.tourney.id === tvPrevId) {
       if (c.idx > tvPrevIdx) {
         levelUpSound(); tvFlash();
-        if (Date.now() > tvAnnQuietUntil) bigAnnounce(S.levels[c.idx], tvLevelNo(S, c.idx), S.levels[c.idx].brk ? 0 : tvCurLen(S, c) / 60000);
+        if (Date.now() > tvAnnQuietUntil) bigAnnounce(S.levels[c.idx], tvLevelNo(S, c.idx), S.levels[c.idx].brk ? 0 : tvCurLen(S, c) / 60000, tvAnteText(S, S.levels[c.idx]));
         const r = tvRebuyIdx(S);
         if (r >= 0 && tvPrevIdx <= r && c.idx > r) {
           bellSound(1.6);
@@ -2810,6 +2817,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("tt-lv").textContent = tvLevelName(S, c.idx); $("tt-lv").classList.toggle("brk", !!cur.brk);
     $("tt-bk").textContent = cur.brk ? "쉬는 시간" : "스몰 / 빅 블라인드";
     $("tt-bl").textContent = blindText(cur);
+    const anteTxt = cur.brk ? (cur.note || "") : tvAnteText(S, cur), ae = $("tt-ante");
+    if (ae.textContent !== anteTxt) ae.textContent = anteTxt;
+    ae.hidden = !anteTxt;
     setNext($("tt-next"), next, c.running && !!next && rem <= 30000);
     const ct = $("tt-ct");
     ct.textContent = clock(rem);
@@ -2817,7 +2827,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     ct.classList.toggle("paused", !c.running);
     ct.classList.toggle("warn", c.running && rem <= 60000);
     $("tt-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / tvCurLen(S, c)) * 100)) + "%";
-    $("tt-dur").innerHTML = `레벨 시간 <b>${fmt(n0(c.dur))}분</b>`;
+    $("tt-dur").innerHTML = `레벨 시간 <b>${fmt(tvCurLen(S, c) / 60000)}분</b>`;
     const r = tvRebuyIdx(S), rb = $("tt-rb");
     rb.hidden = r < 0;
     if (r >= 0) {
@@ -2899,7 +2909,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 
   /* ---------- 화면 그리기 ---------- */
   /* 내용이 바뀐 곳만 다시 그림: 다른 테이블 소식으로 내 자리표가 다시 그려지다가 누른 버튼이 사라지는 일 방지 */
-  let tvBustOpen = false;
+  let tvBustOpen = false, tvMergeTold = "";
   function setHTML(el, html) { if (el.__html !== html) { el.innerHTML = html; el.__html = html; } }
   function renderTV() {
     $("tvLobby").hidden = !!tv.id;
@@ -2928,7 +2938,15 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const rbTotal = tvPlayers().reduce((a, p) => a + (p.rebuys || 0), 0);
     if (rbTotal) line += ` · 리바인 ${rbTotal}회`;
     let hint = "";
-    if (!tvFinal() && t.status !== "setup" && counts.length > 1) {
+    const inUse = counts.length, seatsN = tvSeatsOf();
+    if (!tvFinal() && t.status !== "setup" && inUse > 2 && alive.length <= (inUse - 1) * seatsN) {
+      // 남은 사람이 테이블 하나를 줄여도 다 앉을 수 있음 → 가장 적은 테이블을 깨기
+      const few = counts.slice().sort((a, b) => a.n - b.n || b.no - a.no)[0];
+      hint = `<div class="hint">${alive.length}명 남았어요. ${inUse - 1}테이블로 합칠 때예요 → ${few.no}번 테이블(${few.n}명, 가장 적음) 깨기${tvCanOp(few.no)
+        ? `<button type="button" class="mini-btn" id="tvBreakHint" data-no="${few.no}">깨기</button>` : ` · ${few.no}번 테이블 폰이나 방장·플로어가 해요`}</div>`;
+      const key = `${t.id}:${inUse}`;
+      if (tvMergeTold !== key) { tvMergeTold = key; toast(`${alive.length}명 남았어요. ${inUse - 1}테이블로 합칠 때예요`); }
+    } else if (!tvFinal() && t.status !== "setup" && counts.length > 1) {
       const mx = counts.reduce((a, b) => (b.n > a.n ? b : a)), mn = counts.reduce((a, b) => (b.n < a.n ? b : a));
       if (mx.n - mn.n >= 2) hint = `<div class="hint">${mx.no}번 테이블 → ${mn.no}번 테이블로 1명 이동을 추천해요 (${mx.n}명 : ${mn.n}명)${tvCanOp(mx.no)
         ? `<button type="button" class="mini-btn" id="tvAutoMove" data-from="${mx.no}" data-to="${mn.no}">자동 이동</button>` : ` · ${mx.no}번 테이블 폰에서 옮겨요`}</div>`;
@@ -3172,6 +3190,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (g("#tvEditTable")) { tvEditTable(); return; }
     if ((b = g("#tvAutoMove"))) { tvAutoMove(Number(b.dataset.from), Number(b.dataset.to)); return; }
     if (g("#tvBreak")) { tvBreak(); return; }
+    if ((b = g("#tvBreakHint"))) { tv.table = Number(b.dataset.no); tvSaveLocal(); renderTV(); tvBreak(); return; }
     if (g("#tvBustMore")) { tvBustOpen = !tvBustOpen; renderTV(); return; }
     if (g("#tvSound")) { openSoundCfg(); return; }
     if (g("#tvInvite")) { tvInvite(); return; }
@@ -3486,7 +3505,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   /* ---------- 토너 세팅 (시작 전·일시정지 중에만) ---------- */
   function tvDraftFrom() {
     const S = tvS(), c = tvEff();
-    return { levels: JSON.parse(JSON.stringify(S.levels)), ftSize: n0(S.ftSize) || 8, seats: tvSeatsOf(), startMin: n0(S.startMin) || 10, dur: n0(c.dur) || 10 };
+    return { levels: JSON.parse(JSON.stringify(S.levels)), ftSize: n0(S.ftSize) || 8, seats: tvSeatsOf(), startMin: n0(S.startMin) || 10, dur: n0(c.dur) || 10, ante: S.ante === "bb" ? "bb" : "" };
   }
   /* opt: "keep" = 고치던 내용 그대로 다시 그림, "reset" = 서버 값으로 새로 */
   function tvRenderSettings(opt) {
@@ -3496,12 +3515,13 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const t = tvT(), running = tvEff().running, notHost = !tvIsBoss(), locked = notHost || running || t.status === "done";
     if (opt === "reset" || !tvDraft || (!tvDraftDirty && tvDraftRev !== t.rev)) { tvDraft = tvDraftFrom(); tvDraftRev = t.rev; tvDraftDirty = false; }
     const D = tvDraft, dis = locked ? " disabled" : "";
-    let rows = `<div class="lv-row head"><span>레벨</span><span>스몰</span><span></span><span>빅</span><span>리바인</span><span></span></div>`;
+    let rows = `<div class="lv-row tv head"><span>레벨</span><span>스몰</span><span></span><span>빅</span><span>분</span><span>리바인</span><span></span></div>`;
     D.levels.forEach((x, i) => {
       const no = x.brk ? "휴식" : D.levels.slice(0, i + 1).filter((y) => !y.brk).length;
-      rows += `<div class="lv-row${x.brk ? " brk" : ""}" data-i="${i}"><span class="lv-no">${no}</span>
-        ${x.brk ? `<span class="brk-label">쉬는 시간 (분)</span><input data-k="min" inputmode="decimal" value="${x.min}"${dis} aria-label="휴식 시간(분)">`
+      rows += `<div class="lv-row tv${x.brk ? " brk" : ""}" data-i="${i}"><span class="lv-no">${no}</span>
+        ${x.brk ? `<span class="brk-label">쉬는 시간${x.note ? ` · ${esc(x.note.split(":")[0])}` : ""}</span><input data-k="min" inputmode="decimal" value="${x.min}"${dis} aria-label="휴식 시간(분)"><span></span>`
           : `<input data-k="sb" inputmode="numeric" value="${x.sb}"${dis} aria-label="스몰"><span class="slash">/</span><input data-k="bb" inputmode="numeric" value="${x.bb}"${dis} aria-label="빅">
+             <input data-k="min" inputmode="decimal" value="${x.min || ""}" placeholder="${fmt(D.dur)}"${dis} aria-label="이 레벨 시간(분)">
              <button class="rb-tog${x.rebuy ? " on" : ""}" type="button" data-trb="${i}"${dis}>${x.rebuy ? "마감" : "·"}</button>`}
         <button class="lv-del" type="button" data-tdel="${i}"${dis || (D.levels.length < 2 ? " disabled" : "")} aria-label="삭제">×</button></div>`;
     });
@@ -3511,9 +3531,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         <label>파이널 테이블 인원<input data-f="ftSize" inputmode="numeric" value="${D.ftSize}"${dis}></label>
         <label>테이블당 자리<input data-f="seats" inputmode="numeric" value="${D.seats}"${dis}></label>
         <label>시작 레벨 시간(분)<input data-f="startMin" inputmode="decimal" value="${fmt(D.startMin)}"${dis}></label>
-        <label>지금 레벨 시간(분)<input data-f="dur" inputmode="decimal" value="${fmt(D.dur)}"${dis}></label>
+        <label>기본 레벨 시간(분)<input data-f="dur" inputmode="decimal" value="${fmt(D.dur)}"${dis}></label>
+        <label>앤티<select data-f="ante"${dis}><option value=""${D.ante ? "" : " selected"}>없음</option><option value="bb"${D.ante === "bb" ? " selected" : ""}>BB 앤티 (처음부터)</option></select></label>
       </div>
-      <p>지금 레벨 시간은 진행 중인 레벨에는 남은 시간 그대로, 다음 레벨부터 적용돼요. 탈락해도 자동으로 바뀌지 않으니 필요할 때 여기서 바꿔요.</p>
+      <p>레벨마다 <b>분</b> 칸을 채우면 그 레벨은 그 시간으로 진행해요. 비워 두면 기본 레벨 시간이에요(바꾸면 다음 레벨부터 적용). BB 앤티는 빅블라인드 자리가 BB만큼 테이블 전체 앤티를 내요.</p>
       <div class="lv-list">${rows}</div>
       <div class="struct-tools">
         <button class="btn-line" type="button" id="tsAddLv"${dis}>레벨 추가</button>
@@ -3521,10 +3542,25 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       </div>
       <div class="struct-tools">
         <button class="btn-line" type="button" id="tsMine"${dis}>내 폰 블라인드 구조 불러오기</button>
+        <button class="btn-line" type="button" id="tsMega"${dis}>🏆 메가홀덤 구조</button>
+      </div>
+      <div class="struct-tools">
         <button class="btn-save" type="button" id="tsSave"${dis}>세팅 저장</button>
       </div>
       ${tvIsHost() ? `<div class="struct-tools"><button class="btn-line danger" type="button" id="tvDelete">토너먼트 지우기</button></div>` : ""}`);
   }
+  $("tvSetBody").addEventListener("change", (e) => {
+    const sel = e.target.closest("select[data-f]"); if (!sel || !tvDraft) return;
+    tvDraft[sel.dataset.f] = sel.value; tvDraftDirty = true;
+  });
+  /* 메가홀덤 진행표: 12분(200/400~2,500/5,000, 끝나면 리바인 마감) → 휴식·워싱 → 10분(3,000/6,000~8,000/16,000) → 7분(10,000/20,000~80,000/160,000), BB 앤티 처음부터 */
+  const MEGA = () => {
+    const L = (sb, bb, min, extra) => Object.assign({ sb, bb, min }, extra || {});
+    return [L(200, 400, 12), L(400, 800, 12), L(600, 1200, 12), L(800, 1600, 12), L(1000, 2000, 12), L(1500, 3000, 12), L(2000, 4000, 12), L(2500, 5000, 12, { rebuy: true }),
+      { brk: true, min: 10, note: "워싱: 100칩 10개 → 1,000칩으로 바꿔요" },
+      L(3000, 6000, 10), L(4000, 8000, 10), L(5000, 10000, 10), L(6000, 12000, 10), L(8000, 16000, 10),
+      L(10000, 20000, 7), L(15000, 30000, 7), L(20000, 40000, 7), L(30000, 60000, 7), L(40000, 80000, 7), L(60000, 120000, 7), L(80000, 160000, 7)];
+  };
   $("tvSetBody").addEventListener("input", (e) => {
     const inp = e.target.closest("input"); if (!inp || !tvDraft) return;
     inp.value = inp.value.replace(/[^0-9.]/g, "");
@@ -3548,6 +3584,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     else if (b.dataset.tdel != null) D.levels.splice(+b.dataset.tdel, 1);
     else if (b.id === "tsAddLv") { const lastLv = [...D.levels].reverse().find((x) => !x.brk) || { bb: 200 }; const bb = nice(n0(lastLv.bb) * 1.5 || 200); D.levels.push({ sb: bb / 2, bb }); }
     else if (b.id === "tsAddBrk") D.levels.push({ brk: true, min: 10 });
+    else if (b.id === "tsMega") { D.levels = MEGA(); D.ante = "bb"; D.startMin = 12; D.dur = 12; D.ftSize = 8; D.seats = 8; toast("메가홀덤 구조를 불러왔어요. 세팅 저장을 눌러야 반영돼요"); }
     else if (b.id === "tsMine") { D.levels = JSON.parse(JSON.stringify(struct.levels)); D.startMin = startMin(); toast("내 폰의 블라인드 구조를 불러왔어요. 저장해야 반영돼요"); }
     else if (b.id === "tsSave") { tvSaveSettings(); return; }
     else return;
@@ -3555,11 +3592,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
   function tvSaveSettings() {
     const D = tvDraft, t = tvT();
-    const levels = D.levels.map((x) => x.brk ? { brk: true, min: n0(x.min) || 10 } : Object.assign({ sb: n0(x.sb), bb: n0(x.bb) }, x.rebuy ? { rebuy: true } : {}));
+    const levels = D.levels.map((x) => x.brk ? Object.assign({ brk: true, min: n0(x.min) || 10 }, x.note ? { note: x.note } : {})
+      : Object.assign({ sb: n0(x.sb), bb: n0(x.bb) }, n0(x.min) > 0 ? { min: n0(x.min) } : {}, x.rebuy ? { rebuy: true } : {}));
     if (!levels.length || levels.some((x) => !x.brk && (!x.sb || !x.bb))) { toast("블라인드 칸에 빈 곳이 있어요"); return; }
     const ftSize = Math.round(n0(D.ftSize)), seats = Math.round(n0(D.seats)), startM = n0(D.startMin), durM = n0(D.dur);
     if (ftSize < 2 || seats < 2 || seats > 12 || startM <= 0 || durM <= 0) { toast("숫자를 확인해 주세요 (자리 2~12, 시간 0보다 크게)"); return; }
-    const settings = { levels, ftSize, seats, startMin: startM };
+    const settings = { levels, ftSize, seats, startMin: startM, ante: D.ante === "bb" ? "bb" : "" };
     let c = tvEff();
     c = Object.assign({}, c, { dur: t.status === "setup" ? startM : durM });
     if (c.idx > levels.length - 1) c.idx = levels.length - 1;
