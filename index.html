@@ -2196,7 +2196,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     seat_taken: "그 자리에 방금 다른 사람이 앉았어요. 다른 자리를 골라 주세요",
     already_out: "이미 탈락 처리된 사람이에요",
     no_tourney: "토너먼트가 지워졌어요",
-    not_host: "타이머와 토너 세팅은 방장이나 플로어만 바꿀 수 있어요",
+    not_host: "토너 세팅은 방장이나 플로어만 바꿀 수 있어요",
     not_owner: "다른 폰이 맡은 테이블이에요. 그 테이블 폰이나 방장 폰에서 해 주세요",
     claimed: "방금 다른 폰이 그 테이블을 맡았어요",
     no_table: "그 테이블이 없어졌어요",
@@ -2874,13 +2874,13 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       rb.className = "pill " + (c.idx < r ? "rb-open" : c.idx === r ? "rb-last" : "rb-closed");
       rb.textContent = c.idx < r ? `리바인 가능 · ${blindText(S.levels[r])}까지` : c.idx === r ? "이번 레벨 끝나면 리바인 마감" : "리바인 마감";
     }
-    const done = t.status === "done", host = tvIsBoss();
-    $("tt-prev").disabled = !host || done || c.idx === 0;
-    $("tt-nextbtn").disabled = !host || done || c.idx >= S.levels.length - 1;
-    $("tt-adj").querySelectorAll("button").forEach((b) => { b.disabled = !host || done; });
-    $("tt-ct").classList.toggle("locked", !host);
+    const done = t.status === "done";                     // 타이머는 딜러 비밀번호만 있으면 누구나
+    $("tt-prev").disabled = done || c.idx === 0;
+    $("tt-nextbtn").disabled = done || c.idx >= S.levels.length - 1;
+    $("tt-adj").querySelectorAll("button").forEach((b) => { b.disabled = done; });
+    $("tt-ct").classList.toggle("locked", false);
     const m = $("tt-main");
-    m.disabled = done || !host;
+    m.disabled = done;
     m.classList.toggle("paused", !done && t.status !== "setup" && !c.running);
     m.textContent = done ? "토너먼트 끝" : t.status === "setup" && !c.running ? "토너먼트 시작" : c.running ? "일시정지" : "재개";
   }
@@ -2888,7 +2888,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function tvClockAct(fn, label, auto) {
     if (!tvData) return;
     unlockAudio();
-    if (!auto && !tvIsBoss()) { toast(`타이머는 ${tvBossLabel()}만 조작할 수 있어요`); return; }
+
     const S = tvS(), now = tvNow(), c = fn(tvEff(), S, now);
     const args = { clock: c };
     if (auto) args.auto = true;
@@ -2929,7 +2929,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
   function tvEditRem() {
     if (!tvData) return;
-    if (!tvIsBoss()) { toast(`타이머는 ${tvBossLabel()}만 조작할 수 있어요`); return; }
+
     const S = tvS(), c = tvEff(), rem = Math.max(0, Math.ceil(tvRem(S, c, tvNow()) / 1000));
     openModal({
       title: "남은 시간 바꾸기 (모든 테이블)",
@@ -3056,10 +3056,10 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     setHTML($("tvStatus"), `<div>${line}</div>${ownLine}${hint}`);
     const fl = t.floor_hash ? (t.floor_name ? `<b>${esc(tvFloorLabel())}</b>` : "플로어(아직 안 들어옴)") : "";
     $("tvHost").innerHTML = tvIsHost()
-      ? `<b>내가 방장이에요.</b> 타이머와 토너 세팅은 이 폰${fl ? `과 ${fl}에서` : "에서만"} 바꿀 수 있어요.${fl ? "" : " 맨 아래 '🧑‍⚖️ 플로어 링크'로 전체 진행을 맡을 플로어를 부를 수 있어요."}`
+      ? `<b>내가 방장이에요.</b> 토너 세팅은 이 폰${fl ? `과 ${fl}에서` : "에서만"} 바꿀 수 있어요. 타이머는 딜러 누구나 조작해요.${fl ? "" : " 맨 아래 '🧑‍⚖️ 플로어 링크'로 전체 진행을 맡을 플로어를 부를 수 있어요."}`
       : tvIsFloor()
-      ? `<b>내가 플로어예요.</b> 타이머·세팅과 모든 테이블을 조작할 수 있어요.`
-      : `타이머·세팅은 <b>${esc(tvHostLabel())}</b>${fl ? `·${fl}` : ""}만 바꿀 수 있어요. 방장 폰이 꺼지면 관리자가 맨 아래 '관리자' 메뉴에서 방장을 맡을 수 있어요.`;
+      ? `<b>내가 플로어예요.</b> 세팅과 모든 테이블을 조작할 수 있어요.`
+      : `타이머는 딜러 누구나 조작해요. 토너 세팅은 <b>${esc(tvHostLabel())}</b>${fl ? `·${fl}` : ""}만 바꿀 수 있어요.`;
     $("tvFloorBtn").hidden = !tvIsHost() || t.status === "done";
 
     $("tvLast").textContent = t.last_action ? `최근: ${t.last_action}${t.last_action_at ? " · " + hhmm(new Date(t.last_action_at).getTime()) : ""}` : "";
