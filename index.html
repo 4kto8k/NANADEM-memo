@@ -2682,6 +2682,16 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const tvOwnedByOther = (no) => { const x = tvTb(no); return !!(x && x.owner_hash && x.owner_hash !== dev.hash); };
   const tvCanOp = (no) => tvIsBoss() || !tvOwnedByOther(no);
   const tvOwnerName = (no) => { const x = tvTb(no); return (x && (x.owner_name || x.dealer)) || "다른"; };
+  /* 테이블 합칠 때인지: 남은 사람이 테이블 하나를 줄여도 다 앉을 수 있음(예: 3테이블 16명). 파이널(2→1)은 따로 */
+  function tvMergeInfo(exceptId) {
+    if (!tvData || tvFinal() || tvT().status === "setup") return null;
+    const alive = tvAlive().filter((p) => p.id !== exceptId && p.table_no != null);
+    const counts = {}; alive.forEach((p) => { counts[p.table_no] = (counts[p.table_no] || 0) + 1; });
+    const list = Object.keys(counts).map((no) => ({ no: Number(no), n: counts[no] }));
+    if (list.length <= 2 || alive.length > (list.length - 1) * tvSeatsOf()) return null;
+    const few = list.sort((a, b) => a.n - b.n || b.no - a.no)[0];
+    return { alive: alive.length, inUse: list.length, few };
+  }
   const tvTablesInUse = (exceptId) => [...new Set(tvAlive().filter((p) => p.id !== exceptId && p.table_no != null).map((p) => p.table_no))];
 
   /* ---------- 서버 ---------- */
@@ -2771,6 +2781,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     renderTV();
     tvWatch();
     tvSyncHostName();
+    tvMergeNotice();
   }
   /* 여러 폰에서 동시에 탈락을 눌러도 놓치지 않게: 상태를 볼 때마다 확인해서 필요하면 타이머를 멈춤.
      파이널 인원 도달 정지는 한 번만(ftPaused). 딜러가 일부러 재개하면 다시 멈추지 않음. */
@@ -2785,6 +2796,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     } else if (!tvFinal() && t.status !== "setup" && alive <= n0(tvS().ftSize) && tvTablesInUse().length > 1 && !t.clock.ftPaused) {
       tvWatchRev = t.rev;
       tvClockAct((x, S, now) => Object.assign(tvPause(x, now), { ftPaused: true }), `${alive}명 남음, 파이널 테이블 전 타이머 멈춤`, true);
+    } else {
+      const m = tvMergeInfo();
+      if (m && t.clock.mergeAt !== m.inUse) {
+        tvWatchRev = t.rev;
+        tvClockAct((x, S, now) => Object.assign(tvPause(x, now), { mergeAt: m.inUse }), `${alive}명 남음, 테이블 합치기 전 타이머 멈춤`, true);
+      }
     }
   }
 
@@ -2911,6 +2928,26 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   /* ---------- 화면 그리기 ---------- */
   /* 내용이 바뀐 곳만 다시 그림: 다른 테이블 소식으로 내 자리표가 다시 그려지다가 누른 버튼이 사라지는 일 방지 */
   let tvBustOpen = false, tvMergeTold = "";
+  /* 합치기로 타이머가 멈추면 모든 폰에 창 (테이블 수마다 한 번). 그 테이블을 조작할 수 있는 폰엔 [깨기] 바로 */
+  function tvMergeNotice() {
+    const m = tvMergeInfo(), c = tvT().clock;
+    if (!m || c.running || c.mergeAt !== m.inUse || !tvActive()) return;
+    const key = `${tvT().id}:${m.inUse}`;
+    if (tvMergeTold === key) return;
+    tvMergeTold = key;
+    beep(2, 880, "arrive");
+    afterModals(() => {
+      const now = tvMergeInfo(); if (!now || now.inUse !== m.inUse) return;
+      const f = now.few, can = tvCanOp(f.no);
+      openModal({
+        title: "🔀 테이블 합치기",
+        body: `<p class="big">${now.alive}명 남았어요.</p><p>타이머를 멈췄어요. <b>${esc(tvTableLabel(f.no))}</b>(${f.n}명, 가장 적음)을 깨서 테이블 ${now.inUse - 1}개로 합쳐요.</p>
+          <p>${can ? "" : `${esc(tvTableLabel(f.no))} 폰이나 방장·플로어가 깨요. `}합친 뒤 ${tvIsBoss() ? "타이머를 재개하세요." : "방장·플로어가 타이머를 재개해요."}</p>`,
+        ok: can ? `${f.no}번 테이블 깨기` : "확인", no: can ? "나중에" : undefined,
+        onOk: () => { if (can) setTimeout(() => { tv.table = f.no; tvSaveLocal(); renderTV(); tvBreak(); }, 60); }
+      });
+    });
+  }
   function setHTML(el, html) { if (el.__html !== html) { el.innerHTML = html; el.__html = html; } }
   function renderTV() {
     $("tvLobby").hidden = !!tv.id;
@@ -2943,10 +2980,9 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (!tvFinal() && t.status !== "setup" && inUse > 2 && alive.length <= (inUse - 1) * seatsN) {
       // 남은 사람이 테이블 하나를 줄여도 다 앉을 수 있음 → 가장 적은 테이블을 깨기
       const few = counts.slice().sort((a, b) => a.n - b.n || b.no - a.no)[0];
-      hint = `<div class="hint">${alive.length}명 남았어요. ${inUse - 1}테이블로 합칠 때예요 → ${few.no}번 테이블(${few.n}명, 가장 적음) 깨기${tvCanOp(few.no)
+      hint = `<div class="hint">${alive.length}명 남았어요. ${inUse - 1}테이블로 합칠 때예요${!tvEff().running ? " (타이머 멈춤)" : ""} → ${few.no}번 테이블(${few.n}명, 가장 적음) 깨기${tvCanOp(few.no)
         ? `<button type="button" class="mini-btn" id="tvBreakHint" data-no="${few.no}">깨기</button>` : ` · ${few.no}번 테이블 폰이나 방장·플로어가 해요`}</div>`;
-      const key = `${t.id}:${inUse}`;
-      if (tvMergeTold !== key) { tvMergeTold = key; toast(`${alive.length}명 남았어요. ${inUse - 1}테이블로 합칠 때예요`); }
+
     } else if (!tvFinal() && t.status !== "setup" && counts.length > 1) {
       const mx = counts.reduce((a, b) => (b.n > a.n ? b : a)), mn = counts.reduce((a, b) => (b.n < a.n ? b : a));
       if (mx.n - mn.n >= 2) hint = `<div class="hint">${mx.no}번 테이블 → ${mn.no}번 테이블로 1명 이동을 추천해요 (${mx.n}명 : ${mn.n}명)${tvCanOp(mx.no)
@@ -3232,6 +3268,12 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     } else if (!tvFinal() && after <= n0(S.ftSize) && tvTablesInUse(p.id).length > 1 && tvEff().running && !tvT().clock.ftPaused) {
       args.clock = Object.assign(tvPause(tvEff(), tvNow()), { ftPaused: true });
       label += ` · ${after}명 남음, 타이머 멈춤`;
+    } else {
+      const m = tvMergeInfo(p.id);
+      if (m && tvEff().running && tvT().clock.mergeAt !== m.inUse) {
+        args.clock = Object.assign(tvPause(tvEff(), tvNow()), { mergeAt: m.inUse });
+        label += ` · ${after}명 남음, 테이블 합치기 전 타이머 멈춤`;
+      }
     }
     const rank = alive.length;
     tvAct("bust", args, label).then((res) => { if (res) showUndo(`${p.name} ${rank}등 탈락`, () => tvUnbustNow(p.id)); });
@@ -3337,7 +3379,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         if (res) {
           const dl = list.find((x) => (movers.find((m) => m.id === x.id) || {}).seat === DEALER_SEAT) || list[0];
           tv.table = dl ? dl.table_no : null; tvSaveLocal(); renderTV();
-          toast(dl ? `테이블을 깼어요. ${dl.name}님이 옮겨 간 ${tvTableLabel(dl.table_no)}을 보여 드려요` : "테이블을 깼어요");
+          const resume = !tvEff().running && tvIsBoss() ? " 확인했으면 타이머를 재개하세요" : "";
+          toast(dl ? `테이블을 깼어요. ${dl.name}님이 옮겨 간 ${tvTableLabel(dl.table_no)}을 보여 드려요.${resume}` : `테이블을 깼어요.${resume}`);
         }
       }
     });
