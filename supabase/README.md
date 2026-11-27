@@ -19,6 +19,7 @@
 - `holdem_tourneys`: 토너먼트 (상태, 세팅, 공용 타이머 `clock`, 최근 동작 알림, `rev`)
 - `holdem_ttables`: 테이블 번호·이름·시작 딜러, 담당 폰(`owner_hash`: 폰 키의 해시, `owner_name`: 맡은 딜러 이름)
 - `holdem_tplayers`: 참가자 (테이블, 자리, 리바인 횟수, 탈락 순서 `bust_seq`). 등수는 탈락 순서로 계산
+- `holdem_pin_ok(p_pin)`: 딜러 비밀번호가 맞는지만 확인(여러 테이블 들어갈 때, 틀린 횟수 잠금은 같음)
 - `holdem_t_state(p_id)`: 전체 상태 + 서버 시각(폰마다 시계 차이 보정)
 - `holdem_t_create`, `holdem_t_do`: 딜러 비밀번호를 확인하고 변경. 타이머·세팅·삭제는 방장 키(만든 폰에만 저장, 서버에는 해시만)도 확인. 타이머(`clock` 동작)는 딜러 비밀번호만 맞으면 누구나. 다른 동작에 딸린 타이머 변경(탈락·파이널 자리 뽑기의 자동 정지)은 방장·플로어가 아니면 멈추기만
 - 플로어: `holdem_tourneys.floor_hash`(플로어 키의 해시)·`floor_name`. 방장이 `floor_set`(새 키, 예전 키는 무효. 키가 비면 플로어 없앰), 플로어나 방장이 `floor_name`. 플로어 키(`p_args.floor`)가 맞으면 방장처럼 타이머·세팅·모든 테이블 조작 가능. `delete`·`host_name`·`host_take`·`floor_set`은 방장만

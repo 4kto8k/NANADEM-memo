@@ -2197,6 +2197,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     already_out: "이미 탈락 처리된 사람이에요",
     no_tourney: "토너먼트가 지워졌어요",
     not_host: "토너 세팅은 방장이나 플로어만 바꿀 수 있어요",
+    wrong_code: "딜러 코드가 틀렸어요",
     not_owner: "다른 폰이 맡은 테이블이에요. 그 테이블 폰이나 방장 폰에서 해 주세요",
     claimed: "방금 다른 폰이 그 테이블을 맡았어요",
     no_table: "그 테이블이 없어졌어요",
@@ -2227,7 +2228,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   $("pNo").addEventListener("click", () => { const c = pinCancel; closePin(); c && c(); });
 
   /* 저장된 비밀번호로 먼저 해 보고, 없거나 틀리면 창을 띄움 */
-  function withPin(title, desc, fn) {
+  function withPin(title, desc, fn, usePin) {
     return new Promise((resolve) => {
       const run = async (pin, fromModal) => {
         let res;
@@ -2247,7 +2248,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         pinSubmit = (pin) => run(pin, true);
         pinCancel = () => resolve(null);
       };
-      const stored = getPin();
+      const stored = usePin !== undefined ? usePin : getPin();
       stored ? run(stored, false) : ask();
     });
   }
@@ -2622,6 +2623,32 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       .then((b) => { dev.hash = Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join(""); devSave(); if (tvData) renderTV(); }).catch(() => {});
   const tvMyName = () => { try { return localStorage.getItem(MYNAME_KEY) || ""; } catch (e) { return ""; } };
   const tvSetMyName = (n) => { try { localStorage.setItem(MYNAME_KEY, n); } catch (e) {} };
+  /* 여러 테이블: 들어갈 때 딜러 코드를 넣은 폰만 조작 (토너먼트마다 이 폰에 저장). 방장·이미 테이블을 맡은 폰은 예전처럼 */
+  const AUTH_KEY = "holdem-tv-auth";
+  const authMap = () => { try { return JSON.parse(localStorage.getItem(AUTH_KEY)) || {}; } catch (e) { return {}; } };
+  const setAuth = (id, pin) => { try { const m = authMap(); m[id] = pin; localStorage.setItem(AUTH_KEY, JSON.stringify(m)); } catch (e) {} };
+  const tvAuthPin = () => (tv.id && authMap()[tv.id]) || null;
+  const tvAuthed = () => !!(tv.id && (authMap()[tv.id] || (tvData && (tvIsHost() || tvMine()))));
+  async function tvVerifyPin(pin) {
+    let r; try { r = await sb("rpc/holdem_pin_ok", { p_pin: pin }); } catch (e) { r = { ok: false, error: "network" }; }
+    if (!r.ok) toast(errText(r.error === "wrong" ? "wrong_code" : r.error));
+    return !!r.ok;
+  }
+  function tvAuthPrompt(then) {
+    openModal({
+      title: "딜러 코드",
+      body: `<p>딜러 코드를 넣으면 이 폰에서 타이머와 테이블을 조작할 수 있어요.</p>
+        <div class="form2"><label>딜러 코드<input id="auPin" type="password" inputmode="numeric" autocomplete="off" aria-label="딜러 코드"></label></div>`,
+      ok: "확인", no: "보기만",
+      onOk: async () => {
+        const pin = ($("auPin").value || "").trim();
+        if (!pin || !(await tvVerifyPin(pin))) { if (!pin) toast("딜러 코드를 넣어 주세요"); setTimeout(() => tvAuthPrompt(then), 50); return; }
+        setAuth(tv.id, pin); renderTV(); toast("이제 이 폰에서 조작할 수 있어요");
+        if (then) then();
+      }
+    });
+    setTimeout(() => { const f = $("auPin"); if (f) f.focus(); }, 50);
+  }
   const tvHostKey = () => (tv.id && hostMap()[tv.id]) ? hostMap()[tv.id].key : "";
   /* 플로어 키: 방장이 만든 플로어 링크(?f=키)를 연 폰에 저장. 서버에는 해시만. 플로어는 타이머·세팅·모든 테이블 조작 */
   const FLOOR_KEY = "holdem-tv-floor";
@@ -2697,7 +2724,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   const tvTb = (no) => (tvData && tvData.tables.find((x) => x.no === no)) || null;
   const tvMine = () => { const x = dev.hash && tvData && tvData.tables.find((y) => y.owner_hash === dev.hash); return x ? x.no : null; };
   const tvOwnedByOther = (no) => { const x = tvTb(no); return !!(x && x.owner_hash && x.owner_hash !== dev.hash); };
-  const tvCanOp = (no) => tvIsBoss() || !tvOwnedByOther(no);
+  const tvCanOp = (no) => tvAuthed() && (tvIsBoss() || !tvOwnedByOther(no));
   const tvOwnerName = (no) => { const x = tvTb(no); return (x && (x.owner_name || x.dealer)) || "다른"; };
   /* 테이블 합칠 때인지: 남은 사람이 테이블 하나를 줄여도 다 앉을 수 있음(예: 3테이블 16명). 파이널(2→1)은 따로 */
   function tvMergeInfo(exceptId) {
@@ -2739,6 +2766,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (tvBusy) { toast("앞의 동작을 처리하는 중이에요. 잠시 후 다시 눌러 주세요"); return null; }
     tvBusy = true;
     try {
+      if (!tvAuthed()) { tvBusy = false; tvAuthPrompt(); return null; }
       const res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 모든 테이블에 반영돼요.", async (pin) => {
         let r = { ok: true };
         for (let k = 0; k < steps.length; k++) {
@@ -2751,7 +2779,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
           if (!r.ok) return r;
         }
         return r;
-      });
+      }, tvAuthPin() || undefined);
       if (res && res.dev_hash && !dev.hash) { dev.hash = res.dev_hash; devSave(); }
       if (res) { tvMyAt = Date.now(); await tvFetch(); }
       return res;
@@ -2805,7 +2833,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
      파이널 인원 도달 정지는 한 번만(ftPaused). 딜러가 일부러 재개하면 다시 멈추지 않음. */
   let tvWatchRev = -1;
   function tvWatch() {
-    if (!tvData || !getPin() || tvBusy) return;
+    if (!tvData || !tvAuthed() || tvBusy) return;
     const t = tvT(), c = tvEff(), alive = tvAlive().length;
     if (!c.running || tvWatchRev === t.rev) return;
     if (t.status === "done" || alive <= 1) {
@@ -2874,19 +2902,20 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       rb.className = "pill " + (c.idx < r ? "rb-open" : c.idx === r ? "rb-last" : "rb-closed");
       rb.textContent = c.idx < r ? `리바인 가능 · ${blindText(S.levels[r])}까지` : c.idx === r ? "이번 레벨 끝나면 리바인 마감" : "리바인 마감";
     }
-    const done = t.status === "done";                     // 타이머는 딜러 비밀번호만 있으면 누구나
-    $("tt-prev").disabled = done || c.idx === 0;
-    $("tt-nextbtn").disabled = done || c.idx >= S.levels.length - 1;
-    $("tt-adj").querySelectorAll("button").forEach((b) => { b.disabled = done; });
-    $("tt-ct").classList.toggle("locked", false);
+    const done = t.status === "done", au = tvAuthed();     // 타이머는 들어갈 때 딜러 코드를 넣은 폰이면 누구나
+    $("tt-prev").disabled = !au || done || c.idx === 0;
+    $("tt-nextbtn").disabled = !au || done || c.idx >= S.levels.length - 1;
+    $("tt-adj").querySelectorAll("button").forEach((b) => { b.disabled = !au || done; });
+    $("tt-ct").classList.toggle("locked", !au);
     const m = $("tt-main");
-    m.disabled = done;
+    m.disabled = done || !au;
     m.classList.toggle("paused", !done && t.status !== "setup" && !c.running);
     m.textContent = done ? "토너먼트 끝" : t.status === "setup" && !c.running ? "토너먼트 시작" : c.running ? "일시정지" : "재개";
   }
   let tvClockJob = null, tvClockSending = false, tvAnnQuietUntil = 0;
   function tvClockAct(fn, label, auto) {
     if (!tvData) return;
+    if (!tvAuthed()) { if (!auto) tvAuthPrompt(); return; }
     unlockAudio();
 
     const S = tvS(), now = tvNow(), c = fn(tvEff(), S, now);
@@ -2929,6 +2958,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
   function tvEditRem() {
     if (!tvData) return;
+    if (!tvAuthed()) { tvAuthPrompt(); return; }
 
     const S = tvS(), c = tvEff(), rem = Math.max(0, Math.ceil(tvRem(S, c, tvNow()) / 1000));
     openModal({
@@ -3027,7 +3057,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       const n = alive.filter((p) => p.table_no === x.no).length;
       const me = !!(dev.hash && x.owner_hash === dev.hash), own = x.owner_hash ? (me ? "📱 내 폰" : "📱 " + esc(x.owner_name || "담당")) : "";
       return `<button type="button" class="tchip${tv.table === x.no ? " on" : ""}${me ? " mine" : ""}${tvFinal() && t.ft_table === x.no ? " ft" : ""}" data-pick="${x.no}">${esc(tvTableLabel(x.no, true))}<small>${n}명${own ? " · " + own : ""}</small></button>`;
-    }).join("") + (t.status !== "done" ? `<button type="button" class="tchip add" id="tvAddTable">+ 테이블</button>` : ""));
+    }).join("") + (t.status !== "done" && tvAuthed() ? `<button type="button" class="tchip add" id="tvAddTable">+ 테이블</button>` : ""));
     $("tvPickHint").hidden = !!tv.table;
     $("tvPickHint").textContent = tvIsFloor() && !tvIsHost() ? "처리할 테이블을 골라 주세요. 플로어는 모든 테이블을 조작할 수 있어요."
       : "볼 테이블을 골라 주세요. 딜러라면 테이블을 고른 뒤 '이 테이블 맡기'를 눌러요.";
@@ -3072,7 +3102,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       : tvFinal() && t.status !== "done" ? `<div class="ft-box on"><b>파이널 테이블 진행 중</b><button class="btn-line" type="button" id="tvFtShow">자리 다시 보기</button></div>` : "");
 
     /* 시작 전: 참가자 등록과 시작 자리 뽑기 */
-    $("tvSetup").hidden = t.status !== "setup";
+    $("tvSetup").hidden = t.status !== "setup" || !tvAuthed();
+    $("tvInvite").hidden = !tvAuthed();
     if (t.status === "setup") {
       const pool = alive.filter((p) => p.table_no == null);
       setHTML($("tvPool"), pool.length
@@ -3090,7 +3121,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     /* 탈락 순서 */
     const busted = tvBusted().slice().reverse(), showB = tvBustOpen ? busted : busted.slice(0, 1);
     setHTML($("tvBusted"), busted.length ? `<h3 class="sub">탈락 순서 <small>${busted.length}명</small></h3><div class="blist">${showB.map((p) =>
-      `<div class="brow"><span class="r">${tvRankOf(p)}등</span><span class="nm">${esc(p.name)}${p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : ""}</span><button type="button" class="mini-btn" data-unbust="${p.id}">되돌리기</button></div>`).join("")}</div>${busted.length > 1 ? `<button type="button" class="btn-text" id="tvBustMore">${tvBustOpen ? "접기" : `더 보기 (${busted.length - 1}명 더)`}</button>` : ""}` : "");
+      `<div class="brow"><span class="r">${tvRankOf(p)}등</span><span class="nm">${esc(p.name)}${p.rebuys ? ` <em class="rbc">R${p.rebuys}</em>` : ""}</span>${tvAuthed() ? `<button type="button" class="mini-btn" data-unbust="${p.id}">되돌리기</button>` : ""}</div>`).join("")}</div>${busted.length > 1 ? `<button type="button" class="btn-text" id="tvBustMore">${tvBustOpen ? "접기" : `더 보기 (${busted.length - 1}명 더)`}</button>` : ""}` : "");
 
     /* 끝: 최종 순위 */
     $("tvDone").hidden = t.status !== "done";
@@ -3134,7 +3165,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   function tvRenderOwn() {
     const no = tv.table, t = tvT();
     let html = "";
-    if (no && tvTb(no) && t.status !== "done" && !(tvFinal() && t.ft_table !== no)) {
+    if (!tvAuthed()) html = `<div class="own-note"><span>👀 <b>보기 전용</b>이에요. 딜러라면 딜러 코드를 넣어 주세요.</span><button type="button" class="mini-btn" id="tvAuthBtn">딜러 코드 입력</button></div>`;
+    else if (no && tvTb(no) && t.status !== "done" && !(tvFinal() && t.ft_table !== no)) {
       const x = tvTb(no);
       if (!x.owner_hash) html = `<div class="own-note"><span><b>${no}번 테이블</b>은 맡은 폰이 없어요.</span><button type="button" class="mini-btn" id="tvClaim">이 테이블 맡기</button></div>`;
       else if (tvOwnedByOther(no)) html = `<div class="own-note"><span>📱 <b>${esc(tvOwnerName(no))}</b> 폰이 맡은 테이블이에요. ${tvIsBoss() ? `${tvIsHost() ? "방장이라" : "플로어라"} 조작할 수 있어요.` : "보기만 할 수 있어요."}</span>${tvIsBoss() ? `<button type="button" class="mini-btn" id="tvRelease">담당 풀기</button>` : ""}</div>`;
@@ -3203,9 +3235,18 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
         openModal({
           title: "플로어로 들어왔어요",
           body: `<p>이 폰에서 <b>타이머·토너 세팅과 모든 테이블</b>을 조작할 수 있어요. 딜러들 테이블도 대신 처리할 수 있어요.</p>
-            <div class="form2"><label>내 이름<input id="flName" list="players" autocomplete="off" value="${esc(tvT().floor_name || tvMyName())}"></label></div>`,
+            <div class="form2">${tvAuthed() ? "" : `<label>딜러 코드<input id="flPin" type="password" inputmode="numeric" autocomplete="off" aria-label="딜러 코드"></label>`}
+              <label>내 이름<input id="flName" list="players" autocomplete="off" value="${esc(tvT().floor_name || tvMyName())}"></label></div>`,
           ok: "확인", no: "나중에",
-          onOk: () => { const n = normName($("flName").value); if (n && n !== tvT().floor_name) { tvSetMyName(n); tvAct("floor_name", { name: n }, `${n} 플로어로 들어옴`); } }
+          onOk: async () => {
+            const pinEl = $("flPin");
+            if (pinEl) {
+              const pin = (pinEl.value || "").trim();
+              if (!pin || !(await tvVerifyPin(pin))) { if (!pin) toast("딜러 코드를 넣어 주세요"); tvJoinFloor = true; setTimeout(tvAskJoin, 50); return; }
+              setAuth(tv.id, pin); renderTV();
+            }
+            const n = normName($("flName").value); if (n && n !== tvT().floor_name) { tvSetMyName(n); tvAct("floor_name", { name: n }, `${n} 플로어로 들어옴`); }
+          }
         });
         return;
       }
@@ -3215,15 +3256,19 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const my = tvMine();
     if (my) { tv.table = my; tvSaveLocal(); renderTV(); return; }
     if (tvT().status === "done") return;
+    const needCode = !tvAuthed();
     openModal({
       title: "토너먼트에 들어왔어요",
-      body: `<p>딜러라면 이름을 넣어 주세요. 맡을 테이블이 자동으로 정해지고 4번 자리(딜러)에 앉아요.</p>
-        <div class="form2"><label>내 이름<input id="jnName" list="players" autocomplete="off" value="${esc(tvMyName())}"></label></div>
-        <p>구경만 하거나 방장이 알아서 할 거면 '보기만'.</p>`,
+      body: `<p>딜러라면 ${needCode ? "딜러 코드와 " : ""}이름을 넣어 주세요. 맡을 테이블이 자동으로 정해지고 4번 자리(딜러)에 앉아요.</p>
+        <div class="form2">${needCode ? `<label>딜러 코드<input id="jnPin" type="password" inputmode="numeric" autocomplete="off" aria-label="딜러 코드"></label>` : ""}
+          <label>내 이름<input id="jnName" list="players" autocomplete="off" value="${esc(tvMyName())}"></label></div>
+        <p>구경만 할 거면 '보기만'. 보기만 하면 타이머와 테이블은 조작할 수 없어요.</p>`,
       ok: "테이블 맡기", no: "보기만",
-      onOk: () => {
-        const n = normName($("jnName").value);
+      onOk: async () => {
+        const n = normName($("jnName").value), pin = needCode ? ($("jnPin").value || "").trim() : "";
+        if (needCode && !pin) { toast("딜러 코드를 넣어 주세요"); setTimeout(tvAskJoin, 50); return; }
         if (!n) { toast("이름을 적어 주세요"); setTimeout(tvAskJoin, 50); return; }
+        if (needCode) { if (!(await tvVerifyPin(pin))) { setTimeout(tvAskJoin, 50); return; } setAuth(tv.id, pin); renderTV(); }
         tvAutoClaim(n);
       }
     });
@@ -3294,6 +3339,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (g("#tvBustMore")) { tvBustOpen = !tvBustOpen; renderTV(); return; }
     if (g("#tvSound")) { openSoundCfg(); return; }
     if (g("#tvInvite")) { tvInvite(); return; }
+    if (g("#tvAuthBtn")) { tvAuthPrompt(); return; }
     if (g("#tvFloorBtn")) { tvFloorInvite(false); return; }
     if (g("#tvClaim")) { tvClaim(tv.table); return; }
     if (g("#tvRelease")) {
@@ -3556,7 +3602,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     if (!tvIsHost() || !tv.table || tvBusy || tv.hostNamed === tvT().host_hash) return;
     tv.hostNamed = tvT().host_hash; tvSaveLocal();
     // 뒤에서 조용히: 사람이 누른 동작(참가자 등록 등)을 '처리 중'으로 막지 않게 tvBusy를 쓰지 않음
-    const pin = getPin();
+    const pin = tvAuthPin() || getPin();
     if (pin && tvWho() !== tvT().host_name) sb("rpc/holdem_t_do", { p_pin: pin, p_id: tv.id, p_action: "host_name", p_args: { host: tvHostKey(), device: dev.key }, p_who: tvWho() }).catch(() => {});
   }
 
@@ -3794,6 +3840,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   });
   async function tvCreateNow(name) {
     if (tvCreating) return;
+    let usedPin = null;
     const settings = { levels: JSON.parse(JSON.stringify(struct.levels)), ftSize: 8, seats: 8, startMin: startMin() };
     const clockInit = { idx: 0, running: false, endsAt: null, remain: null, levelLen: null, dur: startMin() };
     const key = newHostKey();
@@ -3801,10 +3848,11 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     let res;
     try {
       res = await withPin("딜러 비밀번호", "비밀번호를 넣으면 새 토너먼트를 만들어요. 만든 이 폰이 방장이 돼요.",
-        (pin) => sb("rpc/holdem_t_create", { p_pin: pin, p_settings: settings, p_clock: clockInit, p_who: "방장", p_host: key }));
+        (pin) => { usedPin = pin; return sb("rpc/holdem_t_create", { p_pin: pin, p_settings: settings, p_clock: clockInit, p_who: "방장", p_host: key }); });
     } finally { tvCreating = false; }
     if (!res) return;
     setHost(res.id, key, res.host_hash);
+    if (usedPin) setAuth(res.id, usedPin);
     tvJoin(res.id);
     await tvFetch();
     if (name && tvData) { if (await tvDoClaim(1, name)) toast("토너먼트를 만들었어요. 🔗 딜러 초대 링크를 단톡방에 올려 주세요"); }
