@@ -1422,7 +1422,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     /* 레벨 시간 · 리바인 상태 */
     $("t-dur").innerHTML = `레벨 시간 <b>${fmt(n0(t.dur))}분</b>`;
     { const pl = state.seats.filter((x) => isPlaying(x)), left = pl.filter((x) => x.rank === "").length, el = $("t-cnt");
-      const h = `<span class="t">👥 남은</span><span class="n">${left}</span><span class="t">/ ${pl.length}</span>`;
+      const h = `<span class="t">👥 생존</span><span class="n">${left}</span><span class="t">/ ${pl.length}</span>`;
       if (el.innerHTML !== h) el.innerHTML = h;
       el.hidden = pl.length < 2; }
     const r = rebuyIdx(), rb = $("t-rb");
@@ -2928,7 +2928,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("tt-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / tvCurLen(S, c)) * 100)) + "%";
     $("tt-dur").innerHTML = `레벨 시간 <b>${fmt(tvCurLen(S, c) / 60000)}분</b>`;
     { const alive = tvAlive().length, inUse = tvTablesInUse().length, el = $("tt-cnt");
-      const h = `<span class="t">👥 남은</span><span class="n">${alive}</span><span class="t">/ ${tvPlayers().length}</span>`;
+      const h = `<span class="t">👥 생존</span><span class="n">${alive}</span><span class="t">/ ${tvPlayers().length}</span>`;
       if (el.innerHTML !== h) el.innerHTML = h;
       el.hidden = !tvPlayers().length; }
     const r = tvRebuyIdx(S), rb = $("tt-rb");
