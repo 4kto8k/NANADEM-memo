@@ -612,6 +612,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
 .blist { display: grid; gap: 0; background: var(--rail); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .brow { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 15px; }
 .brow:first-child { border-top: 0; }
+.brow .seatno { color: var(--faint); font-size: 12px; font-weight: 500; }
 .brow .r { color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
 .done-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 16px; }
 .done-list li:first-child { color: var(--gold); font-size: 20px; }
@@ -818,6 +819,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <div id="seats"></div>
   </section>
   <button class="btn-line seat-draw" id="seatDraw" type="button" hidden>🎲 자리 랜덤 뽑기 <small>(4번 딜러는 그대로)</small></button>
+
+  <div id="sheetBusted"></div>
 
   <div class="rule">
     <b>당일총점</b> = 참가 기본 1점 + 등수 보너스(1등 +4, 2등 +2, 3·4등 +1) + 딜러(4번 자리) +0.5 + 뽑기점수
@@ -1884,29 +1887,51 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const left = unrankedSeats();
     if (left.length < 2 || state.seats[i].rank !== "") return;
     const rk = left.length, name = state.seats[i].name.trim() || `${i + 1}번 자리`;
-    const snap = sheetSnap();
-    hideUndo();                                                  // 앞 사람 되돌리기는 여기서 끝
+    hideUndo();                                                  // 자리 뽑기 되돌리기 바가 떠 있으면 닫기
     state.seats[i].rank = String(rk); seatEls[i].rank.value = String(rk);
     refresh(); save();
     toast(`${name} ${rk}등`);
-    onRank(i, rk);
-    /* 리바인·블라인드 업 창까지 다 끝난 뒤 10초 되돌리기 (등수·리바인·블라인드·시간을 누르기 전으로) */
-    const token = ++bustToken;
-    afterModals(() => {
-      if (token !== bustToken) return;
-      const what = state.seats[i].rank === "" ? `${name} 리바인` : `${name} ${rk}등 탈락`;
-      showUndo(what, () => sheetRestore(snap, what));
-    });
+    onRank(i, rk);                                   // 잘못 눌렀으면 아래 '탈락 순서'의 [되돌리기]
   }
-  let bustToken = 0;
-  const sheetSnap = () => JSON.parse(JSON.stringify({ seats: state.seats.map((s) => ({ rank: s.rank, rebuys: s.rebuys || 0 })), timer: state.timer, end: state.end }));
-  function sheetRestore(snap, what) {
-    if (!$("modal").hidden && $("finEnd")) dismissModal();      // 우승 마무리 창이 떠 있으면 닫기
-    snap.seats.forEach((x, i) => { state.seats[i].rank = x.rank; state.seats[i].rebuys = x.rebuys; seatEls[i].rank.value = x.rank; });
-    state.timer = snap.timer; state.end = snap.end;
-    keepAwake(!!state.start && !state.end);
-    refresh(); renderTimer(); renderStruct(); save();
-    toast(`되돌렸어요 (${what})`);
+  /* 탈락 순서 (최근 1명, 펼치면 전체) + 되돌리기: 그 뒤에 탈락한 사람 등수는 하나씩 밀리고, 1등이 정해져 있었으면 다시 진행 중으로 */
+  let sheetBustOpen = false;
+  function renderSheetBusted() {
+    const box = $("sheetBusted"); if (!box) return;
+    const out = state.seats.map((x, i) => ({ s: x, i, r: parseInt(x.rank, 10) })).filter((x) => isPlaying(x.s) && x.r >= 2).sort((a, b) => a.r - b.r);
+    const show = sheetBustOpen ? out : out.slice(0, 1);
+    const html = out.length ? `<h3 class="sub">탈락 순서 <small>${out.length}명</small></h3><div class="blist">${show.map((x) =>
+      `<div class="brow"><span class="r">${x.r}등</span><span class="nm">${esc(x.s.name.trim() || `${x.i + 1}번 자리`)}${x.s.rebuys ? ` <em class="rbc">R${x.s.rebuys}</em>` : ""} <small class="seatno">${x.i + 1}번</small></span><button type="button" class="mini-btn" data-sunbust="${x.i}">되돌리기</button></div>`).join("")}</div>${out.length > 1 ? `<button type="button" class="btn-text" id="sheetBustMore">${sheetBustOpen ? "접기" : `더 보기 (${out.length - 1}명 더)`}</button>` : ""}` : "";
+    if (box.__html !== html) { box.innerHTML = html; box.__html = html; }
+  }
+  $("sheetBusted").addEventListener("click", (e) => {
+    if (e.target.closest("#sheetBustMore")) { sheetBustOpen = !sheetBustOpen; renderSheetBusted(); return; }
+    const b = e.target.closest("[data-sunbust]"); if (b) sheetUnbust(Number(b.dataset.sunbust));
+  });
+  function sheetUnbust(i) {
+    const s0 = state.seats[i], r = parseInt(s0.rank, 10);
+    if (!(r >= 2)) return;
+    const name = s0.name.trim() || `${i + 1}번 자리`;
+    const later = state.seats.filter((x) => { const q = parseInt(x.rank, 10); return q >= 2 && q < r; }).length;
+    const won = state.seats.some((x) => x.rank === "1");
+    openModal({
+      title: `${esc(name)} 탈락 되돌리기`,
+      body: `<p class="big">${r}등 탈락을 취소하고 자리로 돌아가요.</p>
+        <p>${later ? `그 뒤에 탈락한 ${later}명은 등수가 하나씩 밀려요(예: ${r - 1}등 → ${r}등). ` : ""}${won ? "1등도 다시 비워지고 게임이 이어져요. " : ""}블라인드·레벨 시간은 바뀌지 않아요.</p>`,
+      ok: "되돌리기", no: "취소",
+      onOk: () => {
+        state.seats.forEach((x, k) => {
+          const q = parseInt(x.rank, 10);
+          if (k === i) x.rank = "";
+          else if (q === 1) x.rank = "";                       // 남은 사람이 다시 2명 이상 → 1등은 아직
+          else if (q >= 2 && q < r) x.rank = String(q + 1);
+          if (seatEls[k]) seatEls[k].rank.value = x.rank;
+        });
+        if (won && state.end) { state.end = null; toast("게임 종료도 취소했어요. 타이머를 재개하세요"); }
+        else toast(`${name} 탈락을 취소했어요`);
+        keepAwake(!!state.start && !state.end);
+        refresh(); renderTimer(); save();
+      }
+    });
   }
   /* 떠 있는 창(리바인·블라인드 업 확인 등)이 모두 닫힌 뒤 실행. 우승 마무리 창은 기다리지 않음 */
   const modalBusy = () => !$("modal").hidden && !$("finEnd");
@@ -1989,6 +2014,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   }
 
   function refresh() {
+    renderSheetBusted();
     // 자리 뽑기 버튼: 게임 시작 전, 4번 말고 이름이 2명 이상일 때
     $("seatDraw").hidden = !!state.start || state.seats.filter((x, i) => i !== DEALER_SEAT - 1 && x.name.trim()).length < 2;
     const counts = {};
