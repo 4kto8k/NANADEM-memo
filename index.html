@@ -2084,7 +2084,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   $("table").addEventListener("input", (e) => { state.table = e.target.value; saveSoon(); renderCloud(); });
 
   /* ---------- copy ---------- */
-  /* [날짜 나나덤 점수기록] 다음 줄부터 등수 순서로: 1등 이름 총 7점 / 미션 1,3 */
+  /* [날짜 나나덤 점수기록] 다음 줄부터 등수 순서로: 1등 이름 총 7점 (5점 + 뽑기 2점) — 괄호 앞 숫자 = 기본+등수+딜러, 뽑기 없으면 괄호 생략, 미션은 안 넣음 */
   function resultText() {
     const day = state.date.replace(/\s*\(.\)$/, "");
     const players = state.seats
@@ -2094,7 +2094,8 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     const lines = [`[${day} 나나덤 점수기록]`];
     players.forEach((p) => {
       const parts = [p.r ? `${p.r}등` : "등수없음", p.s.name.trim() || `${p.seat}번자리`];
-      lines.push(`${parts.join(" ")} 총 ${fmt(p.t)}점 / 미션 ${p.s.mission.trim() || "-"}`);
+      const dr = drawPoints(p.s.draw);
+      lines.push(`${parts.join(" ")} 총 ${fmt(p.t)}점${dr ? ` (${fmt(p.t - dr)}점 + 뽑기 ${fmt(dr)}점)` : ""}`);
     });
     return lines.join("\n");
   }
