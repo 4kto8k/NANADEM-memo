@@ -280,8 +280,13 @@ details.struct[open] summary::after { content: "접기"; }
 .toast.show { opacity: 1; }
 /* timer status pills */
 .t-info { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.pill.cnt { color: var(--chalk); }
-.pill.cnt b { color: var(--gold); }
+/* 남은 인원 큰 배지 (타이머 맨 위 오른쪽) */
+.cnt-badge { display: inline-flex; align-items: baseline; gap: 5px; background: var(--gold-bg); border: 1px solid #6b5220; border-radius: 14px; padding: 2px 12px 3px; white-space: nowrap; }
+.cnt-badge .n { font-family: var(--num); font-size: 30px; font-weight: 600; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
+.cnt-badge .t { font-size: 14px; color: #d9c69c; font-weight: 700; }
+.t-info .t-next { border: 1px solid var(--line); background: var(--well); padding: 3px 10px; font-size: 13px; text-align: center; }
+.t-info .t-next b { font-size: 15px; }
+.t-info .t-next:empty { display: none; }
 .pill {
   font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
   background: var(--well); border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
@@ -690,13 +695,16 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   body.land #stage .blinds { grid-area: bl; }
   body.land #stage .blinds .k { display: none; }
   body.land #stage .blinds .v { font-size: clamp(30px, 16vh, 96px); line-height: 1.02; }
-  body.land #stage .count { grid-area: ct; align-self: center; font-size: clamp(64px, 42vh, 260px); line-height: 0.92; }
+  body.land #stage .count { grid-area: ct; align-self: center; font-size: clamp(64px, 38vh, 260px); line-height: 1.1; overflow: visible; }
   body.land #stage .bar { grid-area: bar; }
   body.land #stage .t-ctrl { grid-area: ctrl; }
   body.land #stage .t-adj { grid-area: adj; gap: 5px; }
   body.land #stage .t-adj button { padding: 0; font-size: 13px; }
   body.land #stage .t-ctrl .btn-main, body.land #stage .t-ctrl .btn-side { padding: 9px 6px; font-size: 15px; }
-  body.land #stage .t-info .pill { padding: 3px 9px; font-size: 12px; }
+  body.land #stage .t-info .pill, body.land #stage .t-info .t-next { padding: 3px 9px; font-size: 12px; }
+  body.land #stage .cnt-badge { padding: 0 10px 1px; border-radius: 11px; }
+  body.land #stage .cnt-badge .n { font-size: clamp(18px, 6.6vh, 30px); }
+  body.land #stage .cnt-badge .t { font-size: 12px; }
   body.land #stage .game-row { grid-area: game; border-top: 0; padding-top: 0; font-size: 12px; align-self: center; }
   body.land #stage .btn-end { padding: 5px 10px; }
 
@@ -724,6 +732,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     transition: right .22s ease-out; visibility: hidden;
   }
   body.land.drawer .wrap { right: 0; visibility: visible; }
+  body.land.drawer #landNav { visibility: hidden; }
   body.land .drawer-close { display: flex; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
 }
 .drawer-close {
@@ -776,7 +785,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   <section class="timer" id="timer" aria-label="블라인드 타이머">
     <div class="t-top">
       <span class="lv-chip" id="t-lv">레벨 1</span>
-      <span class="t-next" id="t-next"></span>
+      <span class="cnt-badge" id="t-cnt" hidden></span>
     </div>
     <div class="blinds">
       <span class="k" id="t-bk">스몰 / 빅 블라인드</span>
@@ -792,7 +801,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     </div>
     <div class="bar"><i id="t-bar"></i></div>
     <div class="t-info">
-      <span class="pill cnt" id="t-cnt" hidden></span>
+      <span class="t-next" id="t-next"></span>
       <span class="pill" id="t-dur">레벨 시간 <b>10분</b></span>
       <span class="pill" id="t-rb" hidden></span>
     </div>
@@ -966,7 +975,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     <section class="timer" id="ttimer" aria-label="공용 블라인드 타이머">
       <div class="t-top">
         <span class="lv-chip" id="tt-lv">레벨 1</span>
-        <span class="t-next" id="tt-next"></span>
+        <span class="cnt-badge" id="tt-cnt" hidden></span>
       </div>
       <div class="blinds">
         <span class="k" id="tt-bk">스몰 / 빅 블라인드</span>
@@ -983,7 +992,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
       </div>
       <div class="bar"><i id="tt-bar"></i></div>
       <div class="t-info">
-        <span class="pill cnt" id="tt-cnt" hidden></span>
+        <span class="t-next" id="tt-next"></span>
         <span class="pill" id="tt-dur">레벨 시간 <b>10분</b></span>
         <span class="pill" id="tt-rb" hidden></span>
       </div>
@@ -1413,7 +1422,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     /* 레벨 시간 · 리바인 상태 */
     $("t-dur").innerHTML = `레벨 시간 <b>${fmt(n0(t.dur))}분</b>`;
     { const pl = state.seats.filter((x) => isPlaying(x)), left = pl.filter((x) => x.rank === "").length, el = $("t-cnt");
-      const h = `👥 남은 <b>${left}</b> / ${pl.length}명`;
+      const h = `<span class="t">👥 남은</span><span class="n">${left}</span><span class="t">/ ${pl.length}</span>`;
       if (el.innerHTML !== h) el.innerHTML = h;
       el.hidden = pl.length < 2; }
     const r = rebuyIdx(), rb = $("t-rb");
@@ -2919,7 +2928,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     $("tt-bar").style.width = Math.min(100, Math.max(0, 100 - (rem / tvCurLen(S, c)) * 100)) + "%";
     $("tt-dur").innerHTML = `레벨 시간 <b>${fmt(tvCurLen(S, c) / 60000)}분</b>`;
     { const alive = tvAlive().length, inUse = tvTablesInUse().length, el = $("tt-cnt");
-      const h = `👥 남은 <b>${alive}</b> / ${tvPlayers().length}명${inUse > 1 ? ` · ${inUse}테이블` : ""}`;
+      const h = `<span class="t">👥 남은</span><span class="n">${alive}</span><span class="t">/ ${tvPlayers().length}</span>`;
       if (el.innerHTML !== h) el.innerHTML = h;
       el.hidden = !tvPlayers().length; }
     const r = tvRebuyIdx(S), rb = $("tt-rb");
