@@ -2084,7 +2084,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
   $("table").addEventListener("input", (e) => { state.table = e.target.value; saveSoon(); renderCloud(); });
 
   /* ---------- copy ---------- */
-  /* [날짜 나나덤 점수기록] 다음 줄부터 등수 순서로: 1등 이름 총 7점(5+뽑기 2) — 괄호 안 앞 숫자 = 기본+등수+딜러, 뽑기 없으면 괄호 생략, 미션은 안 넣음 */
+  /* [날짜 나나덤 점수기록] 다음 줄부터 등수 순서로: 1등 이름 7점(5+뽑기2) — 괄호 안 앞 숫자 = 기본+등수+딜러, 뽑기 없으면 괄호 생략, 미션은 안 넣음 */
   function resultText() {
     const day = state.date.replace(/\s*\(.\)$/, "");
     const players = state.seats
@@ -2095,7 +2095,7 @@ h3.sub { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--muted)
     players.forEach((p) => {
       const parts = [p.r ? `${p.r}등` : "등수없음", p.s.name.trim() || `${p.seat}번자리`];
       const dr = drawPoints(p.s.draw);
-      lines.push(`${parts.join(" ")} 총 ${fmt(p.t)}점${dr ? `(${fmt(p.t - dr)}+뽑기 ${fmt(dr)})` : ""}`);
+      lines.push(`${parts.join(" ")} ${fmt(p.t)}점${dr ? `(${fmt(p.t - dr)}+뽑기${fmt(dr)})` : ""}`);
     });
     return lines.join("\n");
   }
